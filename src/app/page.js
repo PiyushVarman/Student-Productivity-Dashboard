@@ -1,12 +1,16 @@
 import Image from "next/image";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
+import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import {CircleCheckBig, Files, NotebookPen, Timer} from "lucide-react";
 export default function Home() {
   return (
     <div className="flex flex-col flex-1 items-center justify-start font-sans bg-gray-200"> {/*bg-[#faf9f6]*/} 
       <div className="flex items-center justify-center relative">
         <div className=" w-screen my-5 pl-5 text-black  text-left leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides']">Study Buddy </div>
-        <div className="rounded-3xl bg-white w-10 py-2 absolute right-10 text-center">🧑</div>
+        <Tooltip>
+          <TooltipTrigger className="rounded-3xl bg-white w-10 py-2 absolute right-10 text-center">🧑</TooltipTrigger>
+          <TooltipContent>User</TooltipContent>
+        </Tooltip>
       </div>
       <div className=" mt-2 *:shadow-2xl w-[99vw] h-[84vh] items-center *:dark:text-black *:rounded-2xl flex flex-row gap-x-5 *:bg-white *:h-full  *:duration-500">
         <div className="w-[25vw] p-5">
@@ -16,12 +20,12 @@ export default function Home() {
               <TabsTrigger value="journal"><NotebookPen/>Journal</TabsTrigger>
             </TabsList>
             <TabsContent value="focus">
-              <div className="outline h-[90%]">
+              <div className="flex grow bg-gray-300 shadow-md hover:scale-101 duration-200 animate-out rounded-xl py-[80%] items-center justify-center">
                 Focus Timer
               </div>
             </TabsContent>
             <TabsContent value="journal">
-              <div>
+              <div className="flex grow bg-gray-300 shadow-md hover:scale-101 duration-200 animate-out rounded-xl py-[80%] items-center justify-center">
                 Journal
               </div>
             </TabsContent>
