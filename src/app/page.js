@@ -2,7 +2,7 @@ import Image from "next/image";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import {Bubble, BubbleContent} from "@/components/ui/bubble";
-import {CircleCheckBig, Files, NotebookPen, Timer} from "lucide-react";
+import {CircleCheckBig, Files, NotebookPen, Timer, Trophy, User} from "lucide-react";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {Dialog, DialogTitle, DialogHeader, DialogDescription, DialogTrigger,DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,41 +11,49 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {AudioPlayer} from "./musicplayer.js";
-import {AudioPlayerButton, AudioPlayerDuration, AudioPlayerProgress, AudioPlayerProvider, AudioPlayerSpeed, AudioPlayerSpeedButtonGroup, AudioPlayerTime, useAudioPlayer, useAudioPlayerTime} from "@/components/ui/audio-player";
+import PomodoroTimer from "@/components/ui/PomodoroTimer.jsx";
 export default function Home() {
   
   return (
     <div className="flex flex-col flex-1 items-center justify-start font-sans bg-gray-200"> {/*bg-[#faf9f6]*/} 
       <div className=" w-[99vw] flex flex-row items-center justify-start ">
         <div className=" text-black my-5 mr-[75vw] pl-[1vw] text-left leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides']">Study Buddy </div>
-        <Dialog>
+        <Dialog className="">
           <Tooltip>
             <DialogTrigger render={<TooltipTrigger render={<Button className="rounded-3xl bg-white w-[2vw] h-[2vw] p-5 text-3xl text-center">🧑</Button>}/>}/>
             
             <TooltipContent>User</TooltipContent>
           </Tooltip>
-          <DialogContent className="">
-          <DialogHeader>
-            <DialogTitle>Edit profile</DialogTitle>
-            <DialogDescription>
-              Make changes to your profile here. Click save when you&apos;re
-              done.
-            </DialogDescription>
-          </DialogHeader>
-          <FieldGroup>
-            <Field>
-              <Label htmlFor="name-1">Name</Label>
-              <Input id="name-1" name="name" defaultValue="Firstname Lastname" />
-            </Field>
-            <Field>
-              <Label htmlFor="username-1">Username</Label>
-              <Input id="username-1" name="username" defaultValue="@hello" />
-            </Field>
-          </FieldGroup>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline">Cancel</Button>} />
-            <Button type="submit">Save changes</Button>
-          </DialogFooter>
+          <DialogContent className="h-max min-h-90 w-[90vw] max-w-none! ">
+          <Tabs defaultValue="userstats" className="flex items-center">
+            <TabsList>
+              <TabsTrigger value="userstats"><User/>User Statistics</TabsTrigger>
+              <TabsTrigger value="rewards"><Trophy/>Rewards</TabsTrigger>
+            </TabsList>
+            <TabsContent value="userstats" className="w-full p-10">
+              <DialogHeader>
+                <DialogTitle>Edit profile</DialogTitle>
+                <DialogDescription>
+                  Make changes to your profile here. Click save when you&apos;re
+                  done.
+                </DialogDescription>
+              </DialogHeader>
+              <FieldGroup className="py-10">
+                <Field>
+                  <Label htmlFor="name-1">Name</Label>
+                  <Input id="name-1" name="name" defaultValue="Firstname Lastname" />
+                </Field>
+                <Field>
+                  <Label htmlFor="username-1">Username</Label>
+                  <Input id="username-1" name="username" defaultValue="@hello" />
+                </Field>
+              </FieldGroup>
+              <DialogFooter>
+                <DialogClose render={<Button variant="outline">Cancel</Button>} />
+                <Button type="submit">Save changes</Button>
+              </DialogFooter>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
         </Dialog>
       </div>
@@ -58,8 +66,8 @@ export default function Home() {
               <TabsTrigger value="journal"><NotebookPen/>Journal</TabsTrigger>
             </TabsList>
             <TabsContent value="focus">
-              <div className="flex grow bg-gray-300 shadow-md hover:scale-101 duration-200 animate-out rounded-xl py-[35vh] items-center justify-center">
-                Focus Timer
+              <div className="flex grow bg-gray-300 shadow-md hover:scale-101 duration-200 animate-out rounded-xl h-full items-center justify-center">
+                <PomodoroTimer/>
               </div>
             </TabsContent>
             <TabsContent value="journal">
