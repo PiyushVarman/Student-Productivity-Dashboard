@@ -3,16 +3,51 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import {Bubble, BubbleContent} from "@/components/ui/bubble";
 import {CircleCheckBig, Files, NotebookPen, Timer} from "lucide-react";
-import {ScrollArea,ScrollBar } from "@/components/ui/scroll-area";
+import {ScrollArea} from "@/components/ui/scroll-area";
+import {Dialog, DialogTitle, DialogHeader, DialogDescription, DialogTrigger,DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { FieldGroup, Field } from "@/components/ui/field";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import {AudioPlayer} from "./musicplayer.js";
+import {AudioPlayerButton, AudioPlayerDuration, AudioPlayerProgress, AudioPlayerProvider, AudioPlayerSpeed, AudioPlayerSpeedButtonGroup, AudioPlayerTime, useAudioPlayer, useAudioPlayerTime} from "@/components/ui/audio-player";
 export default function Home() {
+  
   return (
     <div className="flex flex-col flex-1 items-center justify-start font-sans bg-gray-200"> {/*bg-[#faf9f6]*/} 
-      <div className="flex items-center justify-center relative">
-        <div className=" w-screen my-5 pl-5 text-black  text-left leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides']">Study Buddy </div>
-        <Tooltip>
-          <TooltipTrigger className="rounded-3xl bg-white w-10 py-2 absolute right-10 text-center">🧑</TooltipTrigger>
-          <TooltipContent>User</TooltipContent>
-        </Tooltip>
+      <div className=" w-[99vw] flex flex-row items-center justify-start ">
+        <div className=" text-black my-5 mr-[75vw] pl-[1vw] text-left leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides']">Study Buddy </div>
+        <Dialog>
+          <Tooltip>
+            <DialogTrigger render={<TooltipTrigger render={<Button className="rounded-3xl bg-white w-[2vw] h-[2vw] p-5 text-3xl text-center">🧑</Button>}/>}/>
+            
+            <TooltipContent>User</TooltipContent>
+          </Tooltip>
+          <DialogContent className="">
+          <DialogHeader>
+            <DialogTitle>Edit profile</DialogTitle>
+            <DialogDescription>
+              Make changes to your profile here. Click save when you&apos;re
+              done.
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            <Field>
+              <Label htmlFor="name-1">Name</Label>
+              <Input id="name-1" name="name" defaultValue="Firstname Lastname" />
+            </Field>
+            <Field>
+              <Label htmlFor="username-1">Username</Label>
+              <Input id="username-1" name="username" defaultValue="@hello" />
+            </Field>
+          </FieldGroup>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline">Cancel</Button>} />
+            <Button type="submit">Save changes</Button>
+          </DialogFooter>
+        </DialogContent>
+        </Dialog>
       </div>
       {/* Apps */}
       <div className="mt-2  w-[99vw] h-[84vh] items-start *:dark:text-black  flex flex-row gap-x-5 *:duration-500">
@@ -62,7 +97,7 @@ export default function Home() {
               </BubbleContent>
             </Bubble>
           </ScrollArea>
-          <textarea className="bg-black/50 w-[95%] relative bottom-5 backdrop-blur-xs shadow-xl py-5 rounded-3xl focus:bg-black duration-200 px-10 text-white"></textarea>
+          <textarea className="bg-black/50 w-[95%] relative bottom-5 backdrop-blur-xs shadow-xl py-5 rounded-3xl focus:bg-black duration-200 px-10 text-white resize-none"></textarea>
         </div>
         <div className="rounded-2xl w-[25vw] flex flex-col ">
           <div className="bg-white h-[55vh] rounded-2xl shadow-2xl">
@@ -86,6 +121,7 @@ export default function Home() {
             </Tabs>
           </div>
           <div className="h-[26.5vh] shadow-2xl bg-white rounded-2xl mt-5 ">
+            <AudioPlayer/>
           </div>
         </div>
       </div>

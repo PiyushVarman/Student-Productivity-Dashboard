@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <title>Study Buddy</title>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
         {children}
       </body>
