@@ -41,10 +41,16 @@ const tracks = [
   },
   {
     id: "track-2",
+    name: "40Hz Binaural Beats",
+    src: "/music/40HzBinauralBeats.mp3",
+    data: { title: "40Hz Binaural Beats", artist: "Be Inspired | Studio" },
+  },
+  {
+    id: "track-3",
     name: "Special",
     src: "/music/SpecialSong.mp3",
     data: { title: "SpecialSong", artist: "RA" },
-  },
+  }
 ]
 
 export const AudioPlayerDemo = () => {
