@@ -1,23 +1,43 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
-import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
-import {Bubble, BubbleContent} from "@/components/ui/bubble";
-import {CircleCheckBig, Files, NotebookPen, Timer, Trophy, User} from "lucide-react";
-import {ScrollArea} from "@/components/ui/scroll-area";
-import {Dialog, DialogTitle, DialogHeader, DialogDescription, DialogTrigger,DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogTitle, DialogHeader, DialogDescription, DialogTrigger, DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, Field } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import {AudioPlayer} from "./musicplayer.js";
+import { AudioPlayer } from "./musicplayer.js";
 import PomodoroTimer from "@/components/ui/PomodoroTimer.jsx";
+
 export default function Home() {
-  
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains("dark");
+    setIsDarkMode(isDark);
+  }, []);
+
+  const toggleTheme = () => {
+    const nextState = !isDarkMode;
+    setIsDarkMode(nextState);
+    if (nextState) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-start font-sans bg-gray-200"> {/*bg-[#faf9f6]*/} 
+    <div className="flex flex-col flex-1 items-center justify-start font-sans bg-gray-200 dark:bg-black/50"> {/*bg-[#faf9f6]*/} 
       <div className=" w-[99vw] flex flex-row items-center justify-start ">
-        <div className=" text-black my-5 mr-[75vw] pl-[1vw] text-left leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides']">Study Buddy </div>
+        <div className=" text-black my-5 mr-[75vw] pl-[1vw] text-left dark:text-shadow-sm/50 dark:text-shadow-white leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides']">Study Buddy </div>
         <Dialog className="">
           <Tooltip>
             <DialogTrigger render={<TooltipTrigger render={<Button className="rounded-3xl bg-white w-[2vw] h-[2vw] p-5 text-3xl text-center">🧑</Button>}/>}/>
@@ -30,7 +50,7 @@ export default function Home() {
               <TabsTrigger value="userstats"><User/>User Statistics</TabsTrigger>
               <TabsTrigger value="rewards"><Trophy/>Rewards</TabsTrigger>
             </TabsList>
-            <TabsContent value="userstats" className="w-full p-10">
+            <TabsContent value="userstats" className="w-max p-10">
               <DialogHeader>
                 <DialogTitle>Edit profile</DialogTitle>
                 <DialogDescription>
@@ -47,6 +67,30 @@ export default function Home() {
                   <Label htmlFor="username-1">Username</Label>
                   <Input id="username-1" name="username" defaultValue="@hello" />
                 </Field>
+                <Field className="flex flex-row items-center  pt-4">
+                  <div className="space-y-0.5">
+                    <Label>Theme Preference</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Switch between light and dark mode appearance
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-30! flex items-center gap-2 cursor-pointer"
+                    onClick={toggleTheme}
+                  >
+                    {isDarkMode ? (
+                      <>
+                        <Sun className="h-4 w-4" /> Light Mode
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="h-4 w-4" /> Dark Mode
+                      </>
+                    )}
+                  </Button>
+                </Field>
               </FieldGroup>
               <DialogFooter>
                 <DialogClose render={<Button variant="outline">Cancel</Button>} />
@@ -59,7 +103,7 @@ export default function Home() {
       </div>
       {/* Apps */}
       <div className="mt-2  w-[99vw] h-[84vh] items-start *:dark:text-black  flex flex-row gap-x-5 *:duration-500">
-        <div className="w-[25vw] shadow-2xl bg-white h-full p-5 rounded-2xl">
+        <Card className="w-[25vw] shadow-2xl bg-white dark:bg-zinc-900 h-full p-5 rounded-2xl">
           <Tabs>
             <TabsList defaultValue="focus">
               <TabsTrigger value="focus"><Timer/>Focus</TabsTrigger>
@@ -71,13 +115,13 @@ export default function Home() {
               </div>
             </TabsContent>
             <TabsContent value="journal">
-              <div className="flex grow bg-gray-300 shadow-md hover:scale-101 duration-200 animate-out rounded-xl py-[35vh] items-center justify-center">
+              <div className="flex grow bg-gray-300 dark:bg-zinc-800 dark:text-white shadow-md hover:scale-101 duration-200 animate-out rounded-xl py-[35vh] items-center justify-center">
                 Journal
               </div>
             </TabsContent>
           </Tabs>
-        </div>
-        <div className="rounded-2xl shadow-2xl flex flex-col items-center justify-center relative bg-white h-full">
+        </Card>
+        <div className="dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col items-center justify-center relative bg-white h-full">
           <ScrollArea className="w-[50vw] flex flex-col h-[95vh] overflow-hidden">
             <Bubble className="text-xl mt-5 ml-5 text-gray-900 ">
               <BubbleContent>
@@ -105,10 +149,10 @@ export default function Home() {
               </BubbleContent>
             </Bubble>
           </ScrollArea>
-          <textarea className="bg-black/50 w-[95%] relative bottom-5 backdrop-blur-xs shadow-xl py-5 rounded-3xl focus:bg-black duration-200 px-10 text-white resize-none"></textarea>
+          <textarea className="bg-black/50 w-[95%] relative bottom-5 backdrop-blur-xs shadow-xl py-5 rounded-3xl focus:bg-black duration-200 px-10 text-white resize-none" placeholder="What would you like to know?"></textarea>
         </div>
         <div className="rounded-2xl w-[25vw] flex flex-col ">
-          <div className="bg-white h-[55vh] rounded-2xl shadow-2xl">
+          <div className="bg-white dark:bg-zinc-900 h-[55vh] rounded-2xl shadow-2xl">
             <Tabs defaultValue="todo" className="rounded-2xl p-5">
               <TabsList>
                 <TabsTrigger value="todo"><CircleCheckBig/>To-Do</TabsTrigger>
@@ -116,13 +160,13 @@ export default function Home() {
               </TabsList>
               <TabsContent value="todo">
                 <ScrollArea>
-                  <div>
+                  <div className="text-black dark:text-white">
                     To-Do List.
                   </div>
                 </ScrollArea>
               </TabsContent>
               <TabsContent value="docs">
-                <div>
+                <div className="text-black dark:text-white">
                   Documents.
                 </div>
               </TabsContent>
@@ -137,5 +181,3 @@ export default function Home() {
     </div>
   );
 }
- 
- 
