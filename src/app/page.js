@@ -37,7 +37,7 @@ export default function Home() {
   return (
     <div className="flex flex-col flex-1 items-center justify-start font-sans bg-gray-200 dark:bg-black/50"> {/*bg-[#faf9f6]*/} 
       <div className=" w-[99vw] flex flex-row items-center justify-start ">
-        <div className=" text-black my-5 mr-[75vw] pl-[1vw] text-left dark:text-shadow-sm/50 dark:text-shadow-white leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides']">Study Buddy </div>
+        <div className=" text-black my-5 mr-[75vw] pl-[1vw] text-left dark:text-shadow-sm/50 dark:text-white leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides']">Study Buddy </div>
         <Dialog className="">
           <Tooltip>
             <DialogTrigger render={<TooltipTrigger render={<Button className="rounded-3xl bg-white w-[2vw] h-[2vw] p-5 text-3xl text-center">🧑</Button>}/>}/>
@@ -121,7 +121,7 @@ export default function Home() {
             </TabsContent>
           </Tabs>
         </Card>
-        <div className="dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col items-center justify-center relative bg-white h-full">
+        <div className="dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col items-center justify-center relative bg-white h-full overflow-clip">
           <ScrollArea className="w-[50vw] flex flex-col h-[95vh] overflow-hidden">
             <Bubble className="text-xl mt-5 ml-5 text-gray-900 ">
               <BubbleContent>
