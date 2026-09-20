@@ -22,6 +22,7 @@ const WALLPAPERS = [
   { id: "yourname", src: "/wallpapers/yourname.jpg", title: "Your Name", theme: "dark" },
   { id: "icons", src: "/wallpapers/icons.png", title: "Icons", theme: "dark" },
   { id: "pastel", src: "/wallpapers/pastel.png", title: "Pastel", theme: "light" },
+  { id: "BND", src: "/wallpapers/brandnewday.webp", title: "Brand New Day", theme: "dark" },
 ];
 
 export default function Home() {
@@ -312,14 +313,14 @@ export default function Home() {
                     placeholder="What are you working on?"
                     value={newTaskText}
                     onChange={(e) => setNewTaskText(e.target.value)}
-                    className="h-9 text-xs dark:bg-zinc-800/80 dark:border-zinc-700 border-black/50"
+                    className="h-9 text-xs text-foreground dark:bg-zinc-800/80 dark:border-zinc-700 border-black/50"
                   />
                   <Button type="submit" size="sm" className="h-9 px-3">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </form>
 
-                <div className="flex items-center justify-between text-sm text-foreground  px-1">
+                <div className="flex items-center justify-between text-sm text-foreground  px-1 ">
                   <span>
                     {tasks.filter((t) => t.completed).length}/{tasks.length} completed
                   </span>
@@ -331,7 +332,7 @@ export default function Home() {
                       All Done!
                     </div>
                   ) : (
-                    <div className="space-y-1.5 pb-2 ">
+                    <div className="space-y-1.5 pb-2 *:shadow-xs">
                       {tasks.map((task) => (
                         <div
                           key={task.id}
@@ -343,7 +344,7 @@ export default function Home() {
                           >
                             <Checkbox
                               checked={task.completed}
-                              onCheckedChange={() => handleToggleTask(task.id)}
+                              onCheckedChange={() => handleToggleTask(task.id)} className="border-foreground/50"
                             />
                             <span
                               className={`text-sm truncate transition-all ${
@@ -378,7 +379,7 @@ export default function Home() {
               </TabsContent>
             </Tabs>
           </div>
-          <div className="h-[26.5vh] shadow-2xl bg-white/90 backdrop-blur-md rounded-2xl mt-5">
+          <div className="h-[26.5vh] shadow-2xl backdrop-blur-md rounded-2xl mt-5">
             <AudioPlayer/>
           </div>
         </div>

@@ -55,7 +55,7 @@ const tracks = [
 
 export const AudioPlayerDemo = () => {
   return (
-    <Card className="w-full h-full flex flex-col justify-center p-4">
+    <Card className="w-full h-full flex flex-col justify-center p-4 bg-background/80 dark:bg-background/50">
       {/* Mini Player Section */}
       <Player />
 
@@ -114,7 +114,7 @@ const Player = () => {
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap ">
         <AudioPlayerButton
           variant="outline"
           size="default"
