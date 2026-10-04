@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Eye, EyeOff, Moon, Sun, ArrowRight, Check, AlertCircle } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, Moon, Sun, ArrowRight, Check, AlertCircle, Copyright } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -220,17 +220,19 @@ export default function AuthPage() {
       </div>
 
       {/* Main Centered Auth Container */}
-      <div className="w-full max-w-md flex flex-col items-center">
+      <div className="max-w-screen flex flex-row  w-screen! items-center justify-center gap-x-50 ">
         {/* Brand Title: Handwriting guides strictly in the logo */}
+        <div>
         <div className="text-center mb-6">
-          <h1 className="text-5xl md:text-6xl text-black dark:text-white leading-tight font-['Playwrite_NZ_Basic_Guides'] drop-shadow-sm select-none">
+          <h1 className="text-6xl text-black dark:text-white leading-tight font-['Playwrite_NZ_Basic_Guides'] drop-shadow-sm select-none">
             Study Buddy
           </h1>
-          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2 font-medium tracking-normal">
-            {authMode === "signin" ? "Sign in to your study room" : "Create your study account"}
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-10 font-medium tracking-normal">
+            Focused learning workspace
           </p>
         </div>
-
+        </div>
+        <div>
         {/* Clean Frosted Auth Card */}
         <div className="w-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-2xl shadow-2xl p-7 md:p-9 border border-white/50 dark:border-zinc-800 transition-all">
           {/* Segmented Sign In / Sign Up Mode Switcher */}
@@ -402,9 +404,10 @@ export default function AuthPage() {
         </div>
 
         {/* Footer info */}
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-6 text-center">
-          Study Buddy • Focused learning workspace
+        <p className="text-xs text-gray-500 dark:text-gray-400 flex justify-center items-center gap-x-0 mt-6 text-center ">
+          <Copyright className="scale-60"/>2026, Study Buddy Inc.
         </p>
+      </div>
       </div>
 
       {/* Forgot Password Modal Dialog */}
