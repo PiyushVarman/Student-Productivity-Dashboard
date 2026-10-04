@@ -5,8 +5,8 @@ import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
-import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2,SendHorizontal } from "lucide-react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Dialog, DialogTitle, DialogHeader, DialogDescription, DialogTrigger, DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, Field } from "@/components/ui/field";
@@ -26,6 +26,43 @@ const WALLPAPERS = [
 ];
 
 export default function Home() {
+  const [messages, setMessages] = useState([
+  { role: "assistant", content: "Hello! How can I help you study today?" },
+]);
+const [input, setInput] = useState("");
+const [isLoading, setIsLoading] = useState(false);
+
+const handleSendMessage = async (e) => {
+  if (e) e.preventDefault();
+  if (!input.trim() || isLoading) return;
+
+  const userMessage = { role: "user", content: input.trim() };
+  const updatedMessages = [...messages, userMessage];
+  setMessages(updatedMessages);
+  setInput("");
+  setIsLoading(true);
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: updatedMessages }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      setMessages([...updatedMessages, { role: "assistant", content: data.reply }]);
+    } else {
+      setMessages([...updatedMessages, { role: "assistant", content: data.error || "Something went wrong." }]);
+    }
+  } catch (err) {
+    console.error(err);
+    setMessages([...updatedMessages, { role: "assistant", content: "Failed to connect to the server." }]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState("");
 
@@ -267,35 +304,47 @@ export default function Home() {
           </Tabs>
         </Card>
 
-        <div className="dark:bg-zinc-900/90 rounded-2xl shadow-2xl flex flex-col items-center justify-center relative bg-white/90 backdrop-blur-md h-full overflow-clip">
-          <ScrollArea className="w-[50vw] flex flex-col h-[95vh] overflow-hidden">
-            <Bubble className="text-xl mt-5 ml-5 text-gray-900 ">
-              <BubbleContent>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-              </BubbleContent>
-            </Bubble>
-            <Bubble variant="muted" align="end" className="text-xl mt-10 ml-30 text-right">
-              <BubbleContent>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-              </BubbleContent>
-            </Bubble>
-            <Bubble className="text-xl mt-10 ml-5 text-gray-900 ">
-              <BubbleContent>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-              </BubbleContent>
-            </Bubble>
-            <Bubble variant="muted" align="end" className="text-xl mt-10 ml-30 text-right">
-              <BubbleContent>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-              </BubbleContent>
-            </Bubble>
-            <Bubble className="text-xl mt-10 ml-5 text-gray-900 ">
-              <BubbleContent>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-              </BubbleContent>
-            </Bubble>
+        <div className="dark:bg-zinc-900/90 w-[60%] rounded-2xl shadow-2xl flex flex-col items-center justify-between relative bg-white/90 backdrop-blur-md h-full ">
+          {/* Chat Messages Area */}
+          <ScrollArea className="w-[90%] flex flex-col h-[80%] rounded px-2 ">
+            <ScrollBar/>
+            <div className="flex flex-col space-y-4 py-4">
+              {messages.map((msg, index) => (
+                <Bubble
+                  key={index}
+                  variant={msg.role === "user" ? "muted" : "default"}
+                  align={msg.role === "user" ? "end" : "start"}
+                  className={`text-xl ${msg.role === "user" ? "ml-30 text-right" : "mr-30 text-left text-gray-900 dark:text-white"}`}
+                >
+                  <BubbleContent>{msg.content}</BubbleContent>
+                </Bubble>
+              ))}
+              {isLoading && (
+                <Bubble className="text-xl mr-30 text-left text-muted-foreground animate-pulse">
+                  <BubbleContent className="animate-bounce">Thinking...</BubbleContent>
+                </Bubble>
+              )}
+            </div>
           </ScrollArea>
-          <textarea className="bg-black/50 w-[95%] relative bottom-5 backdrop-blur-xs shadow-xl py-5 rounded-3xl focus:bg-black duration-200 px-10 text-white resize-none" placeholder="What would you like to know?"></textarea>
+
+          {/* Chat Input Area */}
+          <form onSubmit={handleSendMessage} className="w-[95%] flex items-center gap-2 mb-5">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              className="bg-black/50 w-full backdrop-blur-xs shadow-xl py-4 rounded-3xl focus:bg-black duration-200 px-6 text-white resize-none outline-none min-h-[50px] max-h-[120px]"
+              placeholder="What would you like to know?"
+            />
+            <Button type="submit" disabled={isLoading} className="rounded-full h-12 w-12 shrink-0">
+              <SendHorizontal/>
+            </Button>
+          </form>
         </div>
 
         <div className="rounded-2xl w-[25vw] flex flex-col">
@@ -326,7 +375,7 @@ export default function Home() {
                   </span>
                 </div>
 
-                <ScrollArea className="flex-1 pr-2">
+                <ScrollArea className="flex-1 pr-2 ">
                   {tasks.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-sm border text-foreground border-dashed rounded-lg">
                       All Done!
