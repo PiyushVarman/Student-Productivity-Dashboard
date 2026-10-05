@@ -26,42 +26,104 @@ const WALLPAPERS = [
 ];
 
 export default function Home() {
-  const [messages, setMessages] = useState([
-  { role: "assistant", content: "Hello! How can I help you study today?" },
-]);
-const [input, setInput] = useState("");
-const [isLoading, setIsLoading] = useState(false);
+  // Journal state
+    const [journalText, setJournalText] = useState("");
+    const [journalEntries, setJournalEntries] = useState([]);
+    const [currentDateTime, setCurrentDateTime] = useState("");
 
-const handleSendMessage = async (e) => {
-  if (e) e.preventDefault();
-  if (!input.trim() || isLoading) return;
+    useEffect(() => {
+      // ... (keep your existing useEffect code for theme, wallpapers, and tasks)
 
-  const userMessage = { role: "user", content: input.trim() };
-  const updatedMessages = [...messages, userMessage];
-  setMessages(updatedMessages);
-  setInput("");
-  setIsLoading(true);
+      // Load saved journals
+      const savedJournals = localStorage.getItem("study_buddy_journals");
+      if (savedJournals) {
+        try {
+          setJournalEntries(JSON.parse(savedJournals));
+        } catch (e) {
+          console.error("Failed to parse journals", e);
+        }
+      }
 
-  try {
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: updatedMessages }),
-    });
+      // Live Date & Time ticker
+      const updateDateTime = () => {
+        const now = new Date();
+        setCurrentDateTime(
+          now.toLocaleDateString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }) +
+            " • " +
+            now.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+        );
+      };
+      updateDateTime();
+      const timer = setInterval(updateDateTime, 10000); // updates every 10 seconds
 
-    const data = await res.json();
-    if (res.ok) {
-      setMessages([...updatedMessages, { role: "assistant", content: data.reply }]);
-    } else {
-      setMessages([...updatedMessages, { role: "assistant", content: data.error || "Something went wrong." }]);
+      return () => clearInterval(timer);
+    }, []);
+
+    const handleSaveJournal = (e) => {
+      e.preventDefault();
+      if (!journalText.trim()) return;
+
+      const newEntry = {
+        id: crypto.randomUUID(),
+        timestamp: currentDateTime,
+        text: journalText.trim(),
+      };
+
+      const updated = [newEntry, ...journalEntries];
+      setJournalEntries(updated);
+      localStorage.setItem("study_buddy_journals", JSON.stringify(updated));
+      setJournalText("");
+    };
+
+    const handleDeleteJournal = (id) => {
+      const updated = journalEntries.filter((entry) => entry.id !== id);
+      setJournalEntries(updated);
+      localStorage.setItem("study_buddy_journals", JSON.stringify(updated));
+    };
+    const [messages, setMessages] = useState([
+    { role: "assistant", content: "Hello! How can I help you study today?" },
+  ]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSendMessage = async (e) => {
+    if (e) e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = { role: "user", content: input.trim() };
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: updatedMessages }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessages([...updatedMessages, { role: "assistant", content: data.reply }]);
+      } else {
+        setMessages([...updatedMessages, { role: "assistant", content: data.error || "Something went wrong." }]);
+      }
+    } catch (err) {
+      console.error(err);
+      setMessages([...updatedMessages, { role: "assistant", content: "Failed to connect to the server." }]);
+    } finally {
+      setIsLoading(false);
     }
-  } catch (err) {
-    console.error(err);
-    setMessages([...updatedMessages, { role: "assistant", content: "Failed to connect to the server." }]);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState("");
@@ -284,8 +346,8 @@ const handleSendMessage = async (e) => {
       </div>
 
       {/* Apps */}
-      <div className="mt-2 w-[99vw] h-[84vh] items-start *:dark:text-black flex flex-row gap-x-5 *:duration-500">
-        <Card className="w-[25vw] shadow-2xl bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md h-full p-5 rounded-2xl">
+      <div className="mt-2 w-[99vw] h-[84vh]  items-start *:dark:text-black flex flex-row gap-x-5 *:duration-500">
+        <Card className="w-[25vw] shadow-2xl bg-white/90 dark:bg-zinc-900/90 outline backdrop-blur-md h-full p-5 rounded-2xl">
           <Tabs>
             <TabsList defaultValue="focus">
               <TabsTrigger value="focus"><Timer/>Focus</TabsTrigger>
@@ -296,9 +358,84 @@ const handleSendMessage = async (e) => {
                 <PomodoroTimer/>
               </div>
             </TabsContent>
-            <TabsContent value="journal">
-              <div className="flex grow bg-gray-300 dark:bg-zinc-800 dark:text-white shadow-md hover:scale-101 duration-200 animate-out rounded-xl py-[35vh] items-center justify-center">
-                Journal
+            <TabsContent value="journal" className="h-full! pt-2">
+              <div className="flex flex-col bg-gray-100 dark:bg-zinc-800/90 rounded-xl p-4 shadow h-125 justify-between">
+                
+                {/* Top Row: Title & View Past Entries Dialog Button */}
+                <div className="flex items-center justify-between pb-2">
+                  <span className="text-sm font-semibold text-foreground">Daily Journal</span>
+                  
+                  <Dialog>
+                    <DialogTrigger>
+                      <Button variant="outline" size="sm" className="h-7 text-xs dark:text-white">
+                        Past Entries ({journalEntries.length})
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="w-[80vw] max-w-lg max-h-[80vh] flex flex-col">
+                      <DialogHeader>
+                        <DialogTitle>Journal History</DialogTitle>
+                        <DialogDescription>{journalEntries.length==0 ? journalEntries.length===1?`You've journalled 1 time`:`You've journalled ${journalEntries.length} times.`:`You are yet to write a Journal Entry.`}</DialogDescription>
+                      </DialogHeader>
+
+                      <ScrollArea className="flex-1 max-h-[50vh] pr-4 my-2">
+                        {journalEntries.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            No journal entries yet. Start logging your thoughts!
+                          </p>
+                        ) : (
+                          <div className="space-y-3">
+                            {journalEntries.map((entry) => (
+                              <div
+                                key={entry.id}
+                                className="p-3 rounded-lg border bg-background/50 flex flex-col gap-1 relative group"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold text-muted-foreground">
+                                    {entry.timestamp}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                    onClick={() => handleDeleteJournal(entry.id)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                                <p className="text-sm whitespace-pre-wrap text-foreground">{entry.text}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </ScrollArea>
+
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant="outline" size="sm">Close</Button>
+                        </DialogClose>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                {/* Date and Time Display */}
+                <div className="text-xs font-medium text-muted-foreground pb-2">
+                  {currentDateTime || "Loading date & time..."}
+                </div>
+
+                {/* Textarea & Log Button Form */}
+                <form onSubmit={handleSaveJournal} className="flex flex-col flex-1 gap-2">
+                  <textarea
+                    value={journalText}
+                    onChange={(e) => setJournalText(e.target.value)}
+                    placeholder="What's on your mind today?"
+                    className="flex-1 w-full bg-background/60 border border-border/60 rounded-lg p-3 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <Button type="submit" size="sm" className="w-full">
+                    Log
+                  </Button>
+                </form>
+
               </div>
             </TabsContent>
           </Tabs>
