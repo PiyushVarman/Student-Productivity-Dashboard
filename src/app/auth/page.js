@@ -309,7 +309,7 @@ export default function AuthPage() {
                   placeholder="student@university.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 h-10 text-sm bg-white/70 dark:bg-zinc-800/70 border-black/15 dark:border-zinc-700 rounded-xl focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white"
+                  className="pl-10 h-10 dark:text-white text-sm bg-white/70 dark:bg-zinc-800/70 border-black/15 dark:border-zinc-700 rounded-xl focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white"
                 />
               </div>
             </div>
@@ -339,7 +339,7 @@ export default function AuthPage() {
                   placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10 h-10 text-sm bg-white/70 dark:bg-zinc-800/70 border-black/15 dark:border-zinc-700 rounded-xl focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white"
+                  className="pl-10 pr-10 h-10 text-sm bg-white/70 dark:text-white dark:bg-zinc-800/70 border-black/15 dark:border-zinc-700 rounded-xl focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white"
                 />
                 <button
                   type="button"
@@ -367,7 +367,7 @@ export default function AuthPage() {
                     placeholder="••••••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 h-10 text-sm bg-white/70 dark:bg-zinc-800/70 border-black/15 dark:border-zinc-700 rounded-xl focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white"
+                    className="pl-10 h-10 text-sm dark:text-white bg-white/70 dark:bg-zinc-800/70 border-black/15 dark:border-zinc-700 rounded-xl focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white"
                   />
                 </div>
               </div>
