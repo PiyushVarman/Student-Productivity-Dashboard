@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
-import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2,SendHorizontal } from "lucide-react";
+import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2, SendHorizontal } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Dialog, DialogTitle, DialogHeader, DialogDescription, DialogTrigger, DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,21 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AudioPlayer } from "./musicplayer.js";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel.jsx";
 import PomodoroTimer from "@/components/ui/PomodoroTimer.jsx";
+import {
+  formatBytes,
+  useFileUpload,
+} from "@/hooks/use-file-upload";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+
+import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+import { CircleAlertIcon, FileArchiveIcon, FileSpreadsheetIcon, FileTextIcon, HeadphonesIcon, ImageIcon, RefreshCwIcon, UploadIcon, VideoIcon, XIcon } from 'lucide-react';
 
 const WALLPAPERS = [
   { id: "yourname", src: "/wallpapers/yourname.jpg", title: "Your Name", theme: "dark" },
@@ -26,69 +41,209 @@ const WALLPAPERS = [
 ];
 
 export default function Home() {
-  // Journal state
-    const [journalText, setJournalText] = useState("");
-    const [journalEntries, setJournalEntries] = useState([]);
-    const [currentDateTime, setCurrentDateTime] = useState("");
+  // File upload configuration defaults
+  const maxFiles = 5;
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  const accept = "*";
+  const multiple = true;
+  const simulateUpload = true;
 
-    useEffect(() => {
-      // ... (keep your existing useEffect code for theme, wallpapers, and tasks)
+  const defaultImages = [
+    {
+      id: "default-3",
+      name: "image-1.png",
+      size: 42048,
+      type: "image/png",
+      url: "https://picsum.photos/1000/800?grayscale&random=10",
+    },
+    {
+      id: "default-4",
+      name: "image-2.png",
+      size: 62807,
+      type: "image/png",
+      url: "https://picsum.photos/1000/800?grayscale&random=11",
+    },
+  ];
 
-      // Load saved journals
-      const savedJournals = localStorage.getItem("study_buddy_journals");
-      if (savedJournals) {
-        try {
-          setJournalEntries(JSON.parse(savedJournals));
-        } catch (e) {
-          console.error("Failed to parse journals", e);
+  const defaultUploadFiles = defaultImages.map((image) => ({
+    id: image.id,
+    file: {
+      name: image.name,
+      size: image.size,
+      type: image.type,
+    },
+    preview: image.url,
+    progress: 100,
+    status: "completed",
+  }));
+
+  const [uploadFiles, setUploadFiles] = useState(defaultUploadFiles);
+
+  const {
+    isDragging,
+    errors,
+    removeFile,
+    clearFiles,
+    handleDragEnter,
+    handleDragLeave,
+    handleDragOver,
+    handleDrop,
+    openFileDialog,
+    getInputProps,
+  } = useFileUpload({
+    maxFiles,
+    maxSize,
+    accept,
+    multiple,
+    initialFiles: defaultImages,
+    onFilesChange: (newFiles) => {
+      const newUploadFiles = newFiles.map((file) => {
+        const existingFile = uploadFiles.find((existing) => existing.id === file.id);
+        if (existingFile) {
+          return { ...existingFile, ...file };
+        } else {
+          return { ...file, progress: 0, status: "uploading" };
         }
+      });
+      setUploadFiles(newUploadFiles);
+    },
+  });
+
+  // Simulate upload progress
+  useEffect(() => {
+    if (!simulateUpload) return;
+
+    const interval = setInterval(() => {
+      setUploadFiles((prev) =>
+        prev.map((file) => {
+          if (file.status !== "uploading") return file;
+
+          const increment = Math.random() * 15 + 5;
+          const newProgress = Math.min(file.progress + increment, 100);
+
+          if (newProgress > 50 && Math.random() < 0.1) {
+            return {
+              ...file,
+              status: "error",
+              error: "Upload failed. Please try again.",
+            };
+          }
+
+          if (newProgress >= 100) {
+            return {
+              ...file,
+              progress: 100,
+              status: "completed",
+            };
+          }
+
+          return {
+            ...file,
+            progress: newProgress,
+          };
+        })
+      );
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [simulateUpload]);
+
+  const retryUpload = (fileId) => {
+    setUploadFiles((prev) =>
+      prev.map((file) =>
+        file.id === fileId
+          ? {
+              ...file,
+              progress: 0,
+              status: "uploading",
+              error: undefined,
+            }
+          : file
+      )
+    );
+  };
+
+  const removeUploadFile = (fileId) => {
+    setUploadFiles((prev) => prev.filter((file) => file.id !== fileId));
+    removeFile(fileId);
+  };
+
+  const getFileIcon = (file) => {
+    const type = file.type || "";
+    if (type.startsWith("image/")) return <ImageIcon className="size-4" />;
+    if (type.startsWith("video/")) return <VideoIcon className="size-4" />;
+    if (type.startsWith("audio/")) return <HeadphonesIcon className="size-4" />;
+    if (type.includes("pdf")) return <FileTextIcon className="size-4" />;
+    if (type.includes("word") || type.includes("doc")) return <FileTextIcon className="size-4" />;
+    if (type.includes("excel") || type.includes("sheet")) return <FileSpreadsheetIcon className="size-4" />;
+    if (type.includes("zip") || type.includes("rar")) return <FileArchiveIcon className="size-4" />;
+    return <FileTextIcon className="size-4" />;
+  };
+
+  const completedCount = uploadFiles.filter((f) => f.status === "completed").length;
+  const errorCount = uploadFiles.filter((f) => f.status === "error").length;
+  const uploadingCount = uploadFiles.filter((f) => f.status === "uploading").length;
+
+  // Journal state
+  const [journalText, setJournalText] = useState("");
+  const [journalEntries, setJournalEntries] = useState([]);
+  const [currentDateTime, setCurrentDateTime] = useState("");
+
+  useEffect(() => {
+    const savedJournals = localStorage.getItem("study_buddy_journals");
+    if (savedJournals) {
+      try {
+        setJournalEntries(JSON.parse(savedJournals));
+      } catch (e) {
+        console.error("Failed to parse journals", e);
       }
+    }
 
-      // Live Date & Time ticker
-      const updateDateTime = () => {
-        const now = new Date();
-        setCurrentDateTime(
-          now.toLocaleDateString("en-US", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          }) +
-            " • " +
-            now.toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-        );
-      };
-      updateDateTime();
-      const timer = setInterval(updateDateTime, 10000); // updates every 10 seconds
+    const updateDateTime = () => {
+      const now = new Date();
+      setCurrentDateTime(
+        now.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }) +
+          " • " +
+          now.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+      );
+    };
+    updateDateTime();
+    const timer = setInterval(updateDateTime, 10000);
 
-      return () => clearInterval(timer);
-    }, []);
+    return () => clearInterval(timer);
+  }, []);
 
-    const handleSaveJournal = (e) => {
-      e.preventDefault();
-      if (!journalText.trim()) return;
+  const handleSaveJournal = (e) => {
+    e.preventDefault();
+    if (!journalText.trim()) return;
 
-      const newEntry = {
-        id: crypto.randomUUID(),
-        timestamp: currentDateTime,
-        text: journalText.trim(),
-      };
-
-      const updated = [newEntry, ...journalEntries];
-      setJournalEntries(updated);
-      localStorage.setItem("study_buddy_journals", JSON.stringify(updated));
-      setJournalText("");
+    const newEntry = {
+      id: crypto.randomUUID(),
+      timestamp: currentDateTime,
+      text: journalText.trim(),
     };
 
-    const handleDeleteJournal = (id) => {
-      const updated = journalEntries.filter((entry) => entry.id !== id);
-      setJournalEntries(updated);
-      localStorage.setItem("study_buddy_journals", JSON.stringify(updated));
-    };
-    const [messages, setMessages] = useState([
+    const updated = [newEntry, ...journalEntries];
+    setJournalEntries(updated);
+    localStorage.setItem("study_buddy_journals", JSON.stringify(updated));
+    setJournalText("");
+  };
+
+  const handleDeleteJournal = (id) => {
+    const updated = journalEntries.filter((entry) => entry.id !== id);
+    setJournalEntries(updated);
+    localStorage.setItem("study_buddy_journals", JSON.stringify(updated));
+  };
+
+  const [messages, setMessages] = useState([
     { role: "assistant", content: "Hello! How can I help you study today?" },
   ]);
   const [input, setInput] = useState("");
@@ -133,7 +288,6 @@ export default function Home() {
   const [newTaskText, setNewTaskText] = useState("");
 
   useEffect(() => {
-    // 1. Theme initialization: Read saved theme, fallback to system/dark default
     const savedTheme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const shouldBeDark = savedTheme ? savedTheme === "dark" : prefersDark;
@@ -145,7 +299,6 @@ export default function Home() {
       document.documentElement.classList.remove("dark");
     }
 
-    // 2. Wallpaper initialization
     const savedBg = localStorage.getItem("selected_wallpaper");
     if (savedBg) {
       setBackgroundImage(savedBg);
@@ -346,10 +499,10 @@ export default function Home() {
       </div>
 
       {/* Apps */}
-      <div className="mt-2 w-[99vw] h-[84vh]  items-start *:dark:text-black flex flex-row gap-x-5 *:duration-500">
+      <div className="mt-2 w-[99vw] h-[84vh] items-start *:dark:text-black flex flex-row gap-x-5 *:duration-500">
         <Card className="w-[25vw] shadow-2xl bg-white/90 dark:bg-zinc-900/90 outline backdrop-blur-md h-full p-5 rounded-2xl">
-          <Tabs>
-            <TabsList defaultValue="focus">
+          <Tabs defaultValue="focus">
+            <TabsList>
               <TabsTrigger value="focus"><Timer/>Focus</TabsTrigger>
               <TabsTrigger value="journal"><NotebookPen/>Journal</TabsTrigger>
             </TabsList>
@@ -366,7 +519,7 @@ export default function Home() {
                   <span className="text-sm font-semibold text-foreground">Daily Journal</span>
                   
                   <Dialog>
-                    <DialogTrigger>
+                    <DialogTrigger asChild>
                       <Button variant="outline" size="sm" className="h-7 text-xs dark:text-white">
                         Past Entries ({journalEntries.length})
                       </Button>
@@ -374,7 +527,13 @@ export default function Home() {
                     <DialogContent className="w-[80vw] max-w-lg max-h-[80vh] flex flex-col">
                       <DialogHeader>
                         <DialogTitle>Journal History</DialogTitle>
-                        <DialogDescription>{journalEntries.length==0 ? journalEntries.length===1?`You've journalled 1 time`:`You've journalled ${journalEntries.length} times.`:`You are yet to write a Journal Entry.`}</DialogDescription>
+                        <DialogDescription>
+                          {journalEntries.length === 0
+                            ? "You are yet to write a Journal Entry."
+                            : journalEntries.length === 1
+                            ? "You've journalled 1 time"
+                            : `You've journalled ${journalEntries.length} times.`}
+                        </DialogDescription>
                       </DialogHeader>
 
                       <ScrollArea className="flex-1 max-h-[50vh] pr-4 my-2">
@@ -441,9 +600,9 @@ export default function Home() {
           </Tabs>
         </Card>
 
-        <div className="dark:bg-zinc-900/90 w-[60%] rounded-2xl shadow-2xl flex flex-col items-center justify-between relative bg-white/90 backdrop-blur-md h-full ">
+        <div className="dark:bg-zinc-900/90 w-[60%] rounded-2xl shadow-2xl flex flex-col items-center justify-between relative bg-white/90 backdrop-blur-md h-full">
           {/* Chat Messages Area */}
-          <ScrollArea className="w-[90%] flex flex-col h-[80%] rounded px-2 ">
+          <ScrollArea className="w-[90%] flex flex-col h-[80%] rounded px-2">
             <ScrollBar/>
             <div className="flex flex-col space-y-4 py-4">
               {messages.map((msg, index) => (
@@ -485,7 +644,7 @@ export default function Home() {
         </div>
 
         <div className="rounded-2xl w-[25vw] flex flex-col">
-          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md h-[55vh] rounded-2xl shadow-2xl">
+          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md h-[55vh] w-[25vw] rounded-2xl shadow-2xl overflow-hidden">
             <Tabs defaultValue="todo" className="rounded-2xl p-5 h-full flex flex-col">
               <TabsList>
                 <TabsTrigger value="todo"><CircleCheckBig/>To-Do</TabsTrigger>
@@ -506,13 +665,13 @@ export default function Home() {
                   </Button>
                 </form>
 
-                <div className="flex items-center justify-between text-sm text-foreground  px-1 ">
+                <div className="flex items-center justify-between text-sm text-foreground px-1">
                   <span>
                     {tasks.filter((t) => t.completed).length}/{tasks.length} completed
                   </span>
                 </div>
 
-                <ScrollArea className="flex-1 pr-2 ">
+                <ScrollArea className="flex-1 pr-2">
                   {tasks.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-sm border text-foreground border-dashed rounded-lg">
                       All Done!
@@ -558,9 +717,175 @@ export default function Home() {
                 </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="docs">
-                <div className="text-black dark:text-white pt-2">
-                  Documents.
+              <TabsContent value="docs" className="flex-1 flex flex-col min-h-0 pt-2 overflow-hidden">
+                <div className="text-black dark:text-white flex flex-col h-full overflow-hidden">
+                  <div className="w-full max-w-2xl flex flex-col h-full overflow-hidden">
+                    {/* Upload Area */}
+                    <div
+                      className={cn(
+                        "rounded-lg relative border flex flex-row justify-center border-dashed p-4 text-center shrink-0 transition-colors",
+                        isDragging
+                          ? "border-primary bg-primary/5"
+                          : "border-muted-foreground/25 hover:border-muted-foreground/50"
+                      )}
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                    >
+                      <input {...getInputProps()} className="sr-only" />
+
+                      <div className="flex flex-row items-center gap-4">
+                        <div
+                          className={cn(
+                            "flex items-center justify-center rounded-full",
+                            isDragging ? "bg-primary/10" : "bg-none"
+                          )}
+                        >
+                          <UploadIcon
+                            className={cn(
+                              "",
+                              isDragging ? "text-primary" : "text-muted-foreground"
+                            )}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="text-md font-semibold">Upload your files</p>
+                        </div>
+
+                        <Button onClick={openFileDialog}>
+                          <UploadIcon className="h-4 w-4 " />
+                          Select
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Upload Stats */}
+                    {uploadFiles.length > 0 && (
+                      <div className="mt-6 flex items-center justify-between ">
+                        <div className="flex items-center gap-1 ">
+                          <h4 className="text-sm font-medium">Files</h4>
+                          <div className="flex items-center justify-center gap-1">
+                            {completedCount > 0 && (
+                              <Badge size="sm" variant="success-light">
+                                Completed: {completedCount}
+                              </Badge>
+                            )}
+                            {errorCount > 0 && (
+                              <Badge size="sm" variant="destructive">
+                                Failed: {errorCount}
+                              </Badge>
+                            )}
+                            {uploadingCount > 0 && (
+                              <Badge size="sm" variant="secondary">
+                                Uploading: {uploadingCount}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <Button onClick={clearFiles} variant="outline" size="xs">
+                          Clear all
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* File List */}
+                    {uploadFiles.length > 0 && (
+                      <ScrollArea className="flex-1 mt-3 pr-3 overflow-y-auto">
+                        {uploadFiles.map((fileItem) => (
+                          <div
+                            key={fileItem.id}
+                            className="border-border overflow-auto my-2 bg-card rounded-lg border p-2.5"
+                          >
+                            <div className="flex items-start gap-2.5">
+                              {/* File Icon */}
+                              <div className="shrink-0">
+                                {fileItem.preview &&
+                                fileItem.file.type.startsWith("image/") ? (
+                                  <img
+                                    src={fileItem.preview}
+                                    alt={fileItem.file.name}
+                                    className="rounded-lg h-12 w-12 border object-cover"
+                                  />
+                                ) : (
+                                  <div className="border-border text-muted-foreground rounded-lg flex h-12 w-12 items-center justify-center border">
+                                    {getFileIcon(fileItem.file)}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* File Info */}
+                              <div className="min-w-0 flex-1 ">
+                                <div className="mt-0.75 flex items-center justify-between">
+                                  <p className="inline-flex flex-col justify-center gap-1 truncate font-medium">
+                                    <span className="text-sm">{fileItem.file.name}</span>
+                                    <span className="text-muted-foreground text-xs">
+                                      {formatBytes(fileItem.file.size)}
+                                    </span>
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    {/* Remove Button */}
+                                    <Button
+                                      onClick={() => removeUploadFile(fileItem.id)}
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-muted-foreground size-6 hover:bg-transparent hover:opacity-100"
+                                    >
+                                      <XIcon className="size-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {/* Progress Bar */}
+                                {fileItem.status === "uploading" && (
+                                  <div className="mt-2">
+                                    <Progress value={fileItem.progress} className="h-1" />
+                                  </div>
+                                )}
+
+                                {/* Error Message */}
+                                {fileItem.status === "error" && fileItem.error && (
+                                  <Alert variant="destructive" className="mt-2 px-2 py-1">
+                                    <CircleAlertIcon className="size-4" />
+                                    <AlertTitle className="text-xs">
+                                      {fileItem.error}
+                                    </AlertTitle>
+                                    <AlertAction>
+                                      <Button
+                                        onClick={() => retryUpload(fileItem.id)}
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-muted-foreground size-6 hover:bg-transparent hover:opacity-100"
+                                      >
+                                        <RefreshCwIcon className="size-3.5" />
+                                      </Button>
+                                    </AlertAction>
+                                  </Alert>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </ScrollArea>
+                    )}
+
+                    {/* Error Messages */}
+                    {errors.length > 0 && (
+                      <Alert variant="destructive" className="mt-5">
+                        <CircleAlertIcon />
+                        <AlertTitle>File upload error(s)</AlertTitle>
+                        <AlertDescription>
+                          {errors.map((error, index) => (
+                            <p key={index} className="last:mb-0">
+                              {error}
+                            </p>
+                          ))}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>
