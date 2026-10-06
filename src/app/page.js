@@ -1,13 +1,40 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
-import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2, SendHorizontal } from "lucide-react";
+import {
+  CircleCheckBig,
+  Files,
+  NotebookPen,
+  Timer,
+  Trophy,
+  User,
+  Moon,
+  Sun,
+  Palette,
+  Plus,
+  Trash2,
+  SendHorizontal,
+  LogOut,
+  ExternalLink,
+  CheckCircle2,
+  Loader2,
+} from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Dialog, DialogTitle, DialogHeader, DialogDescription, DialogTrigger, DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogTitle,
+  DialogHeader,
+  DialogDescription,
+  DialogTrigger,
+  DialogContent,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, Field } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
@@ -15,12 +42,15 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AudioPlayer } from "./musicplayer.js";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel.jsx";
-import PomodoroTimer from "@/components/ui/PomodoroTimer.jsx";
 import {
-  formatBytes,
-  useFileUpload,
-} from "@/hooks/use-file-upload";
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel.jsx";
+import PomodoroTimer from "@/components/ui/PomodoroTimer.jsx";
+import { formatBytes, useFileUpload } from "@/hooks/use-file-upload";
 import {
   Alert,
   AlertAction,
@@ -31,7 +61,43 @@ import { Badge } from "@/components/ui/badge";
 
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
-import { CircleAlertIcon, FileArchiveIcon, FileSpreadsheetIcon, FileTextIcon, HeadphonesIcon, ImageIcon, RefreshCwIcon, UploadIcon, VideoIcon, XIcon } from 'lucide-react';
+import {
+  CircleAlertIcon,
+  FileArchiveIcon,
+  FileSpreadsheetIcon,
+  FileTextIcon,
+  HeadphonesIcon,
+  ImageIcon,
+  RefreshCwIcon,
+  UploadIcon,
+  VideoIcon,
+  XIcon,
+} from "lucide-react";
+
+// Firebase imports
+import { auth, db, storage, isFirebaseConfigured } from "@/lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  addDoc,
+  deleteDoc,
+  updateDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  getDocs,
+  writeBatch,
+} from "firebase/firestore";
+import {
+  ref as storageRef,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 
 const WALLPAPERS = [
   { id: "yourname", src: "/wallpapers/yourname.jpg", title: "Your Name", theme: "dark" },
@@ -41,164 +107,193 @@ const WALLPAPERS = [
 ];
 
 export default function Home() {
-  // File upload configuration defaults
-  const maxFiles = 5;
-  const maxSize = 10 * 1024 * 1024; // 10MB
-  const accept = "*";
-  const multiple = true;
-  const simulateUpload = true;
+  const router = useRouter();
 
-  const defaultImages = [
-    {
-      id: "default-3",
-      name: "image-1.png",
-      size: 42048,
-      type: "image/png",
-      url: "https://picsum.photos/1000/800?grayscale&random=10",
-    },
-    {
-      id: "default-4",
-      name: "image-2.png",
-      size: 62807,
-      type: "image/png",
-      url: "https://picsum.photos/1000/800?grayscale&random=11",
-    },
-  ];
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  const defaultUploadFiles = defaultImages.map((image) => ({
-    id: image.id,
-    file: {
-      name: image.name,
-      size: image.size,
-      type: image.type,
-    },
-    preview: image.url,
-    progress: 100,
-    status: "completed",
-  }));
+  // Profile State
+  const [profileName, setProfileName] = useState("");
+  const [profileUsername, setProfileUsername] = useState("");
+  const [profileSaveStatus, setProfileSaveStatus] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  const [uploadFiles, setUploadFiles] = useState(defaultUploadFiles);
+  // Appearance & Theme State
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [backgroundImage, setBackgroundImage] = useState("");
 
-  const {
-    isDragging,
-    errors,
-    removeFile,
-    clearFiles,
-    handleDragEnter,
-    handleDragLeave,
-    handleDragOver,
-    handleDrop,
-    openFileDialog,
-    getInputProps,
-  } = useFileUpload({
-    maxFiles,
-    maxSize,
-    accept,
-    multiple,
-    initialFiles: defaultImages,
-    onFilesChange: (newFiles) => {
-      const newUploadFiles = newFiles.map((file) => {
-        const existingFile = uploadFiles.find((existing) => existing.id === file.id);
-        if (existingFile) {
-          return { ...existingFile, ...file };
-        } else {
-          return { ...file, progress: 0, status: "uploading" };
-        }
-      });
-      setUploadFiles(newUploadFiles);
-    },
-  });
-
-  // Simulate upload progress
-  useEffect(() => {
-    if (!simulateUpload) return;
-
-    const interval = setInterval(() => {
-      setUploadFiles((prev) =>
-        prev.map((file) => {
-          if (file.status !== "uploading") return file;
-
-          const increment = Math.random() * 15 + 5;
-          const newProgress = Math.min(file.progress + increment, 100);
-
-          if (newProgress > 50 && Math.random() < 0.1) {
-            return {
-              ...file,
-              status: "error",
-              error: "Upload failed. Please try again.",
-            };
-          }
-
-          if (newProgress >= 100) {
-            return {
-              ...file,
-              progress: 100,
-              status: "completed",
-            };
-          }
-
-          return {
-            ...file,
-            progress: newProgress,
-          };
-        })
-      );
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, [simulateUpload]);
-
-  const retryUpload = (fileId) => {
-    setUploadFiles((prev) =>
-      prev.map((file) =>
-        file.id === fileId
-          ? {
-              ...file,
-              progress: 0,
-              status: "uploading",
-              error: undefined,
-            }
-          : file
-      )
-    );
-  };
-
-  const removeUploadFile = (fileId) => {
-    setUploadFiles((prev) => prev.filter((file) => file.id !== fileId));
-    removeFile(fileId);
-  };
-
-  const getFileIcon = (file) => {
-    const type = file.type || "";
-    if (type.startsWith("image/")) return <ImageIcon className="size-4" />;
-    if (type.startsWith("video/")) return <VideoIcon className="size-4" />;
-    if (type.startsWith("audio/")) return <HeadphonesIcon className="size-4" />;
-    if (type.includes("pdf")) return <FileTextIcon className="size-4" />;
-    if (type.includes("word") || type.includes("doc")) return <FileTextIcon className="size-4" />;
-    if (type.includes("excel") || type.includes("sheet")) return <FileSpreadsheetIcon className="size-4" />;
-    if (type.includes("zip") || type.includes("rar")) return <FileArchiveIcon className="size-4" />;
-    return <FileTextIcon className="size-4" />;
-  };
-
-  const completedCount = uploadFiles.filter((f) => f.status === "completed").length;
-  const errorCount = uploadFiles.filter((f) => f.status === "error").length;
-  const uploadingCount = uploadFiles.filter((f) => f.status === "uploading").length;
-
-  // Journal state
+  // Journal State
   const [journalText, setJournalText] = useState("");
   const [journalEntries, setJournalEntries] = useState([]);
   const [currentDateTime, setCurrentDateTime] = useState("");
 
+  // AI Chat State
+  const [messages, setMessages] = useState([
+    { role: "assistant", content: "Hello! How can I help you study today?" },
+  ]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isClearChatDialogOpen, setIsClearChatDialogOpen] = useState(false);
+
+  // To-Do List State
+  const [tasks, setTasks] = useState([]);
+  const [newTaskText, setNewTaskText] = useState("");
+
+  // Documents / File Upload State
+  const maxFiles = 5;
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  const accept = "*";
+  const multiple = true;
+
+  const [uploadedDocs, setUploadedDocs] = useState([]);
+  const [uploadingQueue, setUploadingQueue] = useState([]);
+  const [fileErrors, setFileErrors] = useState([]);
+  const [isClearAllDocsDialogOpen, setIsClearAllDocsDialogOpen] = useState(false);
+
+  // 1. Monitor Authentication State
   useEffect(() => {
-    const savedJournals = localStorage.getItem("study_buddy_journals");
-    if (savedJournals) {
-      try {
-        setJournalEntries(JSON.parse(savedJournals));
-      } catch (e) {
-        console.error("Failed to parse journals", e);
-      }
+    if (!auth) {
+      setAuthLoading(false);
+      return;
     }
 
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        // Load user profile from Firestore
+        try {
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            const loadedName = data.name || user.displayName || user.email?.split("@")[0] || "Student";
+            const loadedUsername = data.username || "@" + (user.email?.split("@")[0] || "student");
+            setProfileName(loadedName);
+            setProfileUsername(loadedUsername);
+
+            if (data.theme) {
+              const shouldBeDark = data.theme === "dark";
+              setIsDarkMode(shouldBeDark);
+              if (shouldBeDark) {
+                document.documentElement.classList.add("dark");
+              } else {
+                document.documentElement.classList.remove("dark");
+              }
+            }
+
+            if (data.backgroundImage !== undefined) {
+              setBackgroundImage(data.backgroundImage || "");
+            }
+          } else {
+            // First time login - initialize profile document
+            const defaultName = user.displayName || user.email?.split("@")[0] || "Student";
+            const defaultUsername = "@" + (user.email?.split("@")[0] || "student");
+            setProfileName(defaultName);
+            setProfileUsername(defaultUsername);
+
+            await setDoc(
+              userRef,
+              {
+                name: defaultName,
+                username: defaultUsername,
+                email: user.email,
+                theme: isDarkMode ? "dark" : "light",
+                backgroundImage: backgroundImage || "",
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              },
+              { merge: true }
+            );
+          }
+        } catch (err) {
+          console.error("Failed to load user profile:", err);
+        } finally {
+          setAuthLoading(false);
+        }
+      } else {
+        setCurrentUser(null);
+        setAuthLoading(false);
+        router.push("/auth");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  // 2. Real-time Listeners for User's Isolated Data (Firestore)
+  useEffect(() => {
+    if (!currentUser || !db) return;
+
+    // A. Journal Entries listener
+    const journalsQuery = query(
+      collection(db, "users", currentUser.uid, "journalEntries"),
+      orderBy("createdAt", "desc")
+    );
+    const unsubJournals = onSnapshot(journalsQuery, (snapshot) => {
+      const entries = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      setJournalEntries(entries);
+    });
+
+    // B. AI Chats listener
+    const chatsQuery = query(
+      collection(db, "users", currentUser.uid, "chats"),
+      orderBy("createdAt", "asc")
+    );
+    const unsubChats = onSnapshot(chatsQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        const msgs = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
+        setMessages(msgs);
+      } else {
+        setMessages([
+          { role: "assistant", content: "Hello! How can I help you study today?" },
+        ]);
+      }
+    });
+
+    // C. To-Do Tasks listener
+    const tasksQuery = query(
+      collection(db, "users", currentUser.uid, "todos"),
+      orderBy("createdAt", "desc")
+    );
+    const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
+      const items = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      setTasks(items);
+    });
+
+    // D. Documents metadata listener
+    const docsQuery = query(
+      collection(db, "users", currentUser.uid, "documents"),
+      orderBy("createdAt", "desc")
+    );
+    const unsubDocs = onSnapshot(docsQuery, (snapshot) => {
+      const docItems = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      setUploadedDocs(docItems);
+    });
+
+    return () => {
+      unsubJournals();
+      unsubChats();
+      unsubTasks();
+      unsubDocs();
+    };
+  }, [currentUser]);
+
+  // 3. Live Date & Time Clock
+  useEffect(() => {
     const updateDateTime = () => {
       const now = new Date();
       setCurrentDateTime(
@@ -221,100 +316,59 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleSaveJournal = (e) => {
-    e.preventDefault();
-    if (!journalText.trim()) return;
-
-    const newEntry = {
-      id: crypto.randomUUID(),
-      timestamp: currentDateTime,
-      text: journalText.trim(),
-    };
-
-    const updated = [newEntry, ...journalEntries];
-    setJournalEntries(updated);
-    localStorage.setItem("study_buddy_journals", JSON.stringify(updated));
-    setJournalText("");
-  };
-
-  const handleDeleteJournal = (id) => {
-    const updated = journalEntries.filter((entry) => entry.id !== id);
-    setJournalEntries(updated);
-    localStorage.setItem("study_buddy_journals", JSON.stringify(updated));
-  };
-
-  const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hello! How can I help you study today?" },
-  ]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSendMessage = async (e) => {
+  // ----------------------------------------------------
+  // PROFILE & APPEARANCE HANDLERS
+  // ----------------------------------------------------
+  const handleSaveProfile = async (e) => {
     if (e) e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!currentUser || !db) return;
 
-    const userMessage = { role: "user", content: input.trim() };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-    setInput("");
-    setIsLoading(true);
+    setIsSavingProfile(true);
+    setProfileSaveStatus("");
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updatedMessages }),
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        name: profileName.trim(),
+        username: profileUsername.trim(),
+        updatedAt: serverTimestamp(),
       });
-
-      const data = await res.json();
-      if (res.ok) {
-        setMessages([...updatedMessages, { role: "assistant", content: data.reply }]);
-      } else {
-        setMessages([...updatedMessages, { role: "assistant", content: data.error || "Something went wrong." }]);
-      }
+      setProfileSaveStatus("Changes saved successfully!");
+      setTimeout(() => setProfileSaveStatus(""), 3000);
     } catch (err) {
-      console.error(err);
-      setMessages([...updatedMessages, { role: "assistant", content: "Failed to connect to the server." }]);
+      console.error("Failed to save profile:", err);
+      setProfileSaveStatus("Failed to save profile.");
     } finally {
-      setIsLoading(false);
+      setIsSavingProfile(false);
     }
   };
 
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [backgroundImage, setBackgroundImage] = useState("");
+  const toggleTheme = async () => {
+    const nextState = !isDarkMode;
+    const nextTheme = nextState ? "dark" : "light";
+    setIsDarkMode(nextState);
 
-  // To-Do List state
-  const [tasks, setTasks] = useState([]);
-  const [newTaskText, setNewTaskText] = useState("");
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const shouldBeDark = savedTheme ? savedTheme === "dark" : prefersDark;
-
-    setIsDarkMode(shouldBeDark);
-    if (shouldBeDark) {
+    if (nextState) {
       document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
 
-    const savedBg = localStorage.getItem("selected_wallpaper");
-    if (savedBg) {
-      setBackgroundImage(savedBg);
-    }
-
-    const savedTasks = localStorage.getItem("study_buddy_tasks");
-    if (savedTasks) {
+    if (currentUser && db) {
       try {
-        setTasks(JSON.parse(savedTasks));
-      } catch (e) {
-        console.error("Failed to parse tasks", e);
+        await setDoc(
+          doc(db, "users", currentUser.uid),
+          { theme: nextTheme, updatedAt: serverTimestamp() },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error("Failed to update theme in Firestore:", err);
       }
     }
-  }, []);
+  };
 
-  const handleSelectWallpaper = (wallpaper) => {
+  const handleSelectWallpaper = async (wallpaper) => {
     setBackgroundImage(wallpaper.src);
     localStorage.setItem("selected_wallpaper", wallpaper.src);
 
@@ -327,57 +381,403 @@ export default function Home() {
     } else {
       document.documentElement.classList.remove("dark");
     }
-  };
 
-  const clearWallpaper = () => {
-    setBackgroundImage("");
-    localStorage.removeItem("selected_wallpaper");
-  };
-
-  const toggleTheme = () => {
-    const nextState = !isDarkMode;
-    setIsDarkMode(nextState);
-
-    if (nextState) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
+    if (currentUser && db) {
+      try {
+        await setDoc(
+          doc(db, "users", currentUser.uid),
+          {
+            backgroundImage: wallpaper.src,
+            theme: wallpaper.theme,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error("Failed to update wallpaper in Firestore:", err);
+      }
     }
   };
 
-  const saveTasks = (updated) => {
-    setTasks(updated);
-    localStorage.setItem("study_buddy_tasks", JSON.stringify(updated));
+  const clearWallpaper = async () => {
+    setBackgroundImage("");
+    localStorage.removeItem("selected_wallpaper");
+
+    if (currentUser && db) {
+      try {
+        await setDoc(
+          doc(db, "users", currentUser.uid),
+          { backgroundImage: "", updatedAt: serverTimestamp() },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error("Failed to clear wallpaper in Firestore:", err);
+      }
+    }
   };
 
-  const handleAddTask = (e) => {
+  const handleSignOut = async () => {
+    try {
+      if (auth) {
+        await signOut(auth);
+      }
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("study_buddy_user");
+      }
+      router.push("/auth");
+    } catch (err) {
+      console.error("Sign out error:", err);
+    }
+  };
+
+  // ----------------------------------------------------
+  // JOURNAL HANDLERS (Firestore)
+  // ----------------------------------------------------
+  const handleSaveJournal = async (e) => {
     e.preventDefault();
-    if (!newTaskText.trim()) return;
+    if (!journalText.trim() || !currentUser || !db) return;
 
-    const newTask = {
-      id: crypto.randomUUID(),
-      title: newTaskText.trim(),
-      completed: false,
-      createdAt: Date.now(),
-    };
+    const textToSave = journalText.trim();
+    setJournalText("");
 
-    saveTasks([newTask, ...tasks]);
+    try {
+      await addDoc(collection(db, "users", currentUser.uid, "journalEntries"), {
+        text: textToSave,
+        timestamp: currentDateTime,
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error("Failed to save journal:", err);
+      setJournalText(textToSave); // Restore text on error
+    }
+  };
+
+  const handleDeleteJournal = async (id) => {
+    if (!currentUser || !db) return;
+    try {
+      await deleteDoc(doc(db, "users", currentUser.uid, "journalEntries", id));
+    } catch (err) {
+      console.error("Failed to delete journal entry:", err);
+    }
+  };
+
+  // ----------------------------------------------------
+  // CHAT HANDLERS (Firestore + Gemini AI)
+  // ----------------------------------------------------
+  const handleSendMessage = async (e) => {
+    if (e) e.preventDefault();
+    if (!input.trim() || isLoading || !currentUser || !db) return;
+
+    const userText = input.trim();
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      // 1. Save user message to Firestore
+      await addDoc(collection(db, "users", currentUser.uid, "chats"), {
+        role: "user",
+        content: userText,
+        createdAt: serverTimestamp(),
+      });
+
+      // 2. Send full history to chat API
+      const conversationToSend = [...messages, { role: "user", content: userText }];
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: conversationToSend }),
+      });
+
+      const data = await res.json();
+      const replyContent = res.ok
+        ? data.reply
+        : data.error || "Something went wrong.";
+
+      // 3. Save assistant reply to Firestore
+      await addDoc(collection(db, "users", currentUser.uid, "chats"), {
+        role: "assistant",
+        content: replyContent,
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error("Chat error:", err);
+      if (currentUser && db) {
+        await addDoc(collection(db, "users", currentUser.uid, "chats"), {
+          role: "assistant",
+          content: "Failed to connect to the server.",
+          createdAt: serverTimestamp(),
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClearChatHistory = async () => {
+    if (!currentUser || !db) return;
+    setIsClearChatDialogOpen(false);
+    try {
+      const snap = await getDocs(collection(db, "users", currentUser.uid, "chats"));
+      const batch = writeBatch(db);
+      snap.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      setMessages([
+        { role: "assistant", content: "Hello! How can I help you study today?" },
+      ]);
+    } catch (err) {
+      console.error("Failed to clear chat history:", err);
+    }
+  };
+
+  // ----------------------------------------------------
+  // TO-DO LIST HANDLERS (Firestore)
+  // ----------------------------------------------------
+  const handleAddTask = async (e) => {
+    e.preventDefault();
+    if (!newTaskText.trim() || !currentUser || !db) return;
+
+    const title = newTaskText.trim();
     setNewTaskText("");
+
+    try {
+      await addDoc(collection(db, "users", currentUser.uid, "todos"), {
+        title,
+        completed: false,
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error("Failed to add task:", err);
+      setNewTaskText(title);
+    }
   };
 
-  const handleToggleTask = (taskId) => {
-    const updated = tasks.map((t) =>
-      t.id === taskId ? { ...t, completed: !t.completed } : t
+  const handleToggleTask = async (taskId, currentCompleted) => {
+    if (!currentUser || !db) return;
+    try {
+      await updateDoc(doc(db, "users", currentUser.uid, "todos", taskId), {
+        completed: !currentCompleted,
+      });
+    } catch (err) {
+      console.error("Failed to toggle task:", err);
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    if (!currentUser || !db) return;
+    try {
+      await deleteDoc(doc(db, "users", currentUser.uid, "todos", taskId));
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+    }
+  };
+
+  // ----------------------------------------------------
+  // DOCUMENTS / FIREBASE STORAGE & FIRESTORE
+  // ----------------------------------------------------
+  const handleUploadFiles = async (incomingFiles) => {
+    if (!currentUser || !storage || !db || !incomingFiles || incomingFiles.length === 0)
+      return;
+
+    setFileErrors([]);
+    const availableSlots = maxFiles - (uploadedDocs.length + uploadingQueue.length);
+
+    if (incomingFiles.length > availableSlots) {
+      setFileErrors([
+        `You can only store up to ${maxFiles} documents. Please delete existing documents before uploading more.`,
+      ]);
+      return;
+    }
+
+    for (const file of incomingFiles) {
+      if (file.size > maxSize) {
+        setFileErrors((prev) => [
+          ...prev,
+          `File "${file.name}" exceeds the maximum allowed size of ${formatBytes(maxSize)}.`,
+        ]);
+        continue;
+      }
+
+      const queueId = crypto.randomUUID();
+      const newQueueItem = {
+        id: queueId,
+        file: {
+          name: file.name,
+          size: file.size,
+          type: file.type || "application/octet-stream",
+        },
+        progress: 0,
+        status: "uploading",
+        error: null,
+      };
+
+      setUploadingQueue((prev) => [newQueueItem, ...prev]);
+
+      try {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `users/${currentUser.uid}/documents/${Date.now()}_${safeName}`;
+        const fileRef = storageRef(storage, path);
+        const uploadTask = uploadBytesResumable(fileRef, file);
+
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const prog =
+              snapshot.totalBytes > 0
+                ? Math.round(
+                    (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+                  )
+                : 0;
+            setUploadingQueue((prev) =>
+              prev.map((item) =>
+                item.id === queueId ? { ...item, progress: prog } : item
+              )
+            );
+          },
+          (error) => {
+            console.error("Storage upload error:", error);
+            setUploadingQueue((prev) =>
+              prev.map((item) =>
+                item.id === queueId
+                  ? { ...item, status: "error", error: "Upload failed: " + error.message }
+                  : item
+              )
+            );
+          },
+          async () => {
+            try {
+              const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+              // Save metadata in user's isolated Firestore subcollection
+              await addDoc(
+                collection(db, "users", currentUser.uid, "documents"),
+                {
+                  name: file.name,
+                  size: file.size,
+                  type: file.type || "application/octet-stream",
+                  storagePath: path,
+                  downloadUrl,
+                  createdAt: serverTimestamp(),
+                }
+              );
+
+              // Remove from uploading queue
+              setUploadingQueue((prev) => prev.filter((item) => item.id !== queueId));
+            } catch (metaErr) {
+              console.error("Failed to save doc metadata:", metaErr);
+              setUploadingQueue((prev) =>
+                prev.map((item) =>
+                  item.id === queueId
+                    ? {
+                        ...item,
+                        status: "error",
+                        error: "Failed to record document metadata in database.",
+                      }
+                    : item
+                )
+              );
+            }
+          }
+        );
+      } catch (err) {
+        console.error("Upload initiation failed:", err);
+        setUploadingQueue((prev) =>
+          prev.map((item) =>
+            item.id === queueId
+              ? { ...item, status: "error", error: "Failed to start upload." }
+              : item
+          )
+        );
+      }
+    }
+  };
+
+  const handleDeleteDocument = async (docItem) => {
+    if (!currentUser || !db) return;
+    try {
+      // 1. Delete file from Firebase Storage
+      if (docItem.storagePath && storage) {
+        try {
+          const fileRef = storageRef(storage, docItem.storagePath);
+          await deleteObject(fileRef);
+        } catch (sErr) {
+          console.warn("Storage delete notice:", sErr);
+        }
+      }
+      // 2. Delete metadata doc from Firestore
+      await deleteDoc(doc(db, "users", currentUser.uid, "documents", docItem.id));
+    } catch (err) {
+      console.error("Failed to delete document:", err);
+    }
+  };
+
+  const handleClearAllDocuments = async () => {
+    if (!currentUser || !db) return;
+    setIsClearAllDocsDialogOpen(false);
+
+    try {
+      for (const item of uploadedDocs) {
+        if (item.storagePath && storage) {
+          try {
+            await deleteObject(storageRef(storage, item.storagePath));
+          } catch (e) {
+            console.warn("Storage deletion:", e);
+          }
+        }
+        await deleteDoc(doc(db, "users", currentUser.uid, "documents", item.id));
+      }
+      setUploadingQueue([]);
+    } catch (err) {
+      console.error("Failed to clear all documents:", err);
+    }
+  };
+
+  const {
+    isDragging,
+    errors: hookValidationErrors,
+    handleDragEnter,
+    handleDragLeave,
+    handleDragOver,
+    handleDrop,
+    openFileDialog,
+    getInputProps,
+  } = useFileUpload({
+    maxFiles,
+    maxSize,
+    accept,
+    multiple,
+    currentFilesCount: uploadedDocs.length,
+    onFilesSelected: (files) => {
+      handleUploadFiles(files);
+    },
+  });
+
+  const getFileIcon = (fileObj) => {
+    const type = fileObj?.type || "";
+    if (type.startsWith("image/")) return <ImageIcon className="size-4" />;
+    if (type.startsWith("video/")) return <VideoIcon className="size-4" />;
+    if (type.startsWith("audio/")) return <HeadphonesIcon className="size-4" />;
+    if (type.includes("pdf")) return <FileTextIcon className="size-4" />;
+    if (type.includes("word") || type.includes("doc")) return <FileTextIcon className="size-4" />;
+    if (type.includes("excel") || type.includes("sheet"))
+      return <FileSpreadsheetIcon className="size-4" />;
+    if (type.includes("zip") || type.includes("rar"))
+      return <FileArchiveIcon className="size-4" />;
+    return <FileTextIcon className="size-4" />;
+  };
+
+  const activeErrors = [...hookValidationErrors, ...fileErrors];
+
+  // Loading Screen while Auth initializes
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-200 dark:bg-black/80 font-sans">
+        <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shadow-2xl">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <h2 className="text-xl font-semibold text-foreground">Loading Study Buddy...</h2>
+          <p className="text-xs text-muted-foreground">Connecting to your secure workspace</p>
+        </div>
+      </div>
     );
-    saveTasks(updated);
-  };
-
-  const handleDeleteTask = (taskId) => {
-    const updated = tasks.filter((t) => t.id !== taskId);
-    saveTasks(updated);
-  };
+  }
 
   return (
     <div
@@ -388,76 +788,163 @@ export default function Home() {
           : "bg-gray-200 dark:bg-black/50"
       }`}
     >
-      <div className="w-[99vw] flex flex-row items-center justify-start">
-        <div className="text-black my-5 mr-[75vw] pl-[1vw] text-left dark:text-shadow-sm/50 dark:text-white leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides'] rounded-xl">
+      {/* Top Header Row */}
+      <div className="w-[99vw] flex flex-row items-center justify-between px-4 my-3">
+        <div className="text-black pl-[1vw] text-left dark:text-shadow-sm/50 dark:text-white leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides'] rounded-xl">
           Study Buddy
         </div>
+
+        {/* User Profile Dialog Modal */}
         <Dialog>
           <Tooltip>
-            <DialogTrigger render={<TooltipTrigger render={<Button className="rounded-3xl bg-white w-[2vw] h-[2vw] p-5 text-3xl text-center">🧑</Button>}/>}/>
-            <TooltipContent>User</TooltipContent>
+            <DialogTrigger render={<TooltipTrigger render={<Button className="rounded-3xl bg-white dark:bg-zinc-800 text-black dark:text-white w-12 h-12 p-2 text-2xl text-center shadow-lg hover:scale-105 transition-all">🧑</Button>}/>}/>
+            <TooltipContent>User Profile & Settings</TooltipContent>
           </Tooltip>
           <DialogContent className="h-max min-h-90 w-[90vw] !max-w-none">
             <Tabs defaultValue="userset" className="flex items-center">
               <TabsList className="flex gap-x-3">
-                <TabsTrigger value="userset"><User/>User Settings</TabsTrigger>
-                <TabsTrigger value="rewards"><Trophy/>Rewards</TabsTrigger>
-                <TabsTrigger value="personalization"><Palette/>Personalization</TabsTrigger>
+                <TabsTrigger value="userset">
+                  <User className="mr-1.5 h-4 w-4" />
+                  User Settings
+                </TabsTrigger>
+                <TabsTrigger value="rewards">
+                  <Trophy className="mr-1.5 h-4 w-4" />
+                  Rewards
+                </TabsTrigger>
+                <TabsTrigger value="personalization">
+                  <Palette className="mr-1.5 h-4 w-4" />
+                  Personalization
+                </TabsTrigger>
               </TabsList>
-              
-              <TabsContent value="userset" className="p-10">
+
+              {/* User Settings Tab */}
+              <TabsContent value="userset" className="p-8 w-full max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Edit profile</DialogTitle>
+                  <DialogTitle>Edit Profile</DialogTitle>
                   <DialogDescription>
-                    Make changes to your profile here. Click save when you&apos;re done.
+                    Update your personal profile and preferences. Updates are saved to your secure account.
                   </DialogDescription>
                 </DialogHeader>
-                <FieldGroup className="py-10">
-                  <Field>
-                    <Label htmlFor="name-1">Name</Label>
-                    <Input id="name-1" name="name" defaultValue="Firstname Lastname" />
-                  </Field>
-                  <Field>
-                    <Label htmlFor="username-1">Username</Label>
-                    <Input id="username-1" name="username" defaultValue="@hello" />
-                  </Field>
-                  <Field className="flex flex-row items-center pt-4">
-                    <div className="space-y-0.5">
-                      <Label>Theme Preference</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Switch between light and dark mode appearance
-                      </p>
-                    </div>
+
+                <form onSubmit={handleSaveProfile} className="space-y-6 py-6">
+                  <FieldGroup className="space-y-4">
+                    <Field>
+                      <Label htmlFor="name-input">Full Name</Label>
+                      <Input
+                        id="name-input"
+                        name="name"
+                        value={profileName}
+                        onChange={(e) => setProfileName(e.target.value)}
+                        placeholder="Your name"
+                        className="mt-1"
+                      />
+                    </Field>
+                    <Field>
+                      <Label htmlFor="username-input">Username</Label>
+                      <Input
+                        id="username-input"
+                        name="username"
+                        value={profileUsername}
+                        onChange={(e) => setProfileUsername(e.target.value)}
+                        placeholder="@username"
+                        className="mt-1"
+                      />
+                    </Field>
+                    <Field>
+                      <Label>Account Email</Label>
+                      <Input
+                        disabled
+                        value={currentUser?.email || "Signed In"}
+                        className="mt-1 opacity-70 cursor-not-allowed bg-muted"
+                      />
+                    </Field>
+                    <Field className="flex flex-row items-center justify-between pt-2 border-t border-border/50">
+                      <div className="space-y-0.5">
+                        <Label>Theme Preference</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Switch between light and dark mode appearance
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="!w-32 flex items-center gap-2 cursor-pointer"
+                        onClick={toggleTheme}
+                      >
+                        {isDarkMode ? (
+                          <>
+                            <Sun className="h-4 w-4 text-amber-500" /> Light Mode
+                          </>
+                        ) : (
+                          <>
+                            <Moon className="h-4 w-4 text-indigo-500" /> Dark Mode
+                          </>
+                        )}
+                      </Button>
+                    </Field>
+                  </FieldGroup>
+
+                  <DialogFooter className="flex items-center justify-between pt-4 border-t border-border/50">
                     <Button
                       type="button"
-                      variant="outline"
-                      className="!w-30 flex items-center gap-2 cursor-pointer"
-                      onClick={toggleTheme}
+                      variant="destructive"
+                      onClick={handleSignOut}
+                      className="gap-2"
                     >
-                      {isDarkMode ? (
-                        <>
-                          <Sun className="h-4 w-4" /> Light Mode
-                        </>
-                      ) : (
-                        <>
-                          <Moon className="h-4 w-4" /> Dark Mode
-                        </>
-                      )}
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
                     </Button>
-                  </Field>
-                </FieldGroup>
-                <DialogFooter>
-                  <DialogClose render={<Button variant="outline">Cancel</Button>} />
-                  <Button type="submit">Save changes</Button>
-                </DialogFooter>
+                    <div className="flex items-center gap-3">
+                      {profileSaveStatus && (
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          {profileSaveStatus}
+                        </span>
+                      )}
+                      <DialogClose render={<Button variant="outline">Cancel</Button>} />
+                      <Button type="submit" disabled={isSavingProfile}>
+                        {isSavingProfile ? "Saving..." : "Save changes"}
+                      </Button>
+                    </div>
+                  </DialogFooter>
+                </form>
               </TabsContent>
 
-              <TabsContent value="personalization" className="flex flex-col items-start pb-10">
+              {/* Rewards Tab */}
+              <TabsContent value="rewards" className="p-8 w-full max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Study Rewards & Milestones</DialogTitle>
+                  <DialogDescription>
+                    Track your streak, study habits, and badges earned.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4 py-6">
+                  <div className="p-4 rounded-xl border bg-muted/40 flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">Tasks Completed</span>
+                    <span className="text-2xl font-bold">{tasks.filter((t) => t.completed).length} Tasks</span>
+                  </div>
+                  <div className="p-4 rounded-xl border bg-muted/40 flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">Journal Entries</span>
+                    <span className="text-2xl font-bold">{journalEntries.length} Entries</span>
+                  </div>
+                  <div className="p-4 rounded-xl border bg-muted/40 flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">Documents Stored</span>
+                    <span className="text-2xl font-bold">{uploadedDocs.length} Files</span>
+                  </div>
+                  <div className="p-4 rounded-xl border bg-muted/40 flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">AI Study Queries</span>
+                    <span className="text-2xl font-bold">{messages.filter(m => m.role === 'user').length} Questions</span>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Personalization Tab */}
+              <TabsContent value="personalization" className="flex flex-col items-start pb-10 p-8">
                 <div className="flex items-center justify-between w-[70vw] my-5">
                   <div className="space-y-0.5">
-                    <Label>Background Theme</Label>
+                    <Label className="text-base font-semibold">Background Theme</Label>
                     <p className="text-xs text-muted-foreground">
-                      Pick your background theme
+                      Pick your preferred background theme. Changes update instantly for your account.
                     </p>
                   </div>
                   {backgroundImage && (
@@ -475,7 +962,7 @@ export default function Home() {
                           onClick={() => handleSelectWallpaper(wp)}
                           className={`cursor-pointer overflow-hidden rounded-xl border-2 transition-all p-1 ${
                             backgroundImage === wp.src
-                              ? "border-primary ring-primary shadow-lg"
+                              ? "border-primary ring-2 ring-primary shadow-lg scale-102"
                               : "border-transparent hover:border-muted-foreground/50"
                           }`}
                         >
@@ -498,29 +985,40 @@ export default function Home() {
         </Dialog>
       </div>
 
-      {/* Apps */}
+      {/* Main Apps Layout */}
       <div className="mt-2 w-[99vw] h-[84vh] items-start *:dark:text-black flex flex-row gap-x-5 *:duration-500">
+        
+        {/* Left Column: Focus Pomodoro & Journal */}
         <Card className="w-[25vw] shadow-2xl bg-white/90 dark:bg-zinc-900/90 outline backdrop-blur-md h-full p-5 rounded-2xl">
           <Tabs defaultValue="focus">
             <TabsList>
-              <TabsTrigger value="focus"><Timer/>Focus</TabsTrigger>
-              <TabsTrigger value="journal"><NotebookPen/>Journal</TabsTrigger>
+              <TabsTrigger value="focus">
+                <Timer className="mr-1.5 h-4 w-4" /> Focus
+              </TabsTrigger>
+              <TabsTrigger value="journal">
+                <NotebookPen className="mr-1.5 h-4 w-4" /> Journal
+              </TabsTrigger>
             </TabsList>
+
             <TabsContent value="focus">
               <div className="flex grow bg-gray-300 shadow-md hover:scale-101 duration-200 animate-out rounded-xl h-full items-center justify-center">
-                <PomodoroTimer/>
+                <PomodoroTimer />
               </div>
             </TabsContent>
+
             <TabsContent value="journal" className="h-full! pt-2">
               <div className="flex flex-col bg-gray-100 dark:bg-zinc-800/90 rounded-xl p-4 shadow h-125 justify-between">
-                
                 {/* Top Row: Title & View Past Entries Dialog Button */}
                 <div className="flex items-center justify-between pb-2">
                   <span className="text-sm font-semibold text-foreground">Daily Journal</span>
-                  
+
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 text-xs dark:text-white">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs dark:text-white"
+                      >
                         Past Entries ({journalEntries.length})
                       </Button>
                     </DialogTrigger>
@@ -561,7 +1059,9 @@ export default function Home() {
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
-                                <p className="text-sm whitespace-pre-wrap text-foreground">{entry.text}</p>
+                                <p className="text-sm whitespace-pre-wrap text-foreground">
+                                  {entry.text}
+                                </p>
                               </div>
                             ))}
                           </div>
@@ -570,7 +1070,9 @@ export default function Home() {
 
                       <DialogFooter>
                         <DialogClose asChild>
-                          <Button variant="outline" size="sm">Close</Button>
+                          <Button variant="outline" size="sm">
+                            Close
+                          </Button>
                         </DialogClose>
                       </DialogFooter>
                     </DialogContent>
@@ -594,23 +1096,68 @@ export default function Home() {
                     Log
                   </Button>
                 </form>
-
               </div>
             </TabsContent>
           </Tabs>
         </Card>
 
+        {/* Center Column: AI Chat */}
         <div className="dark:bg-zinc-900/90 w-[60%] rounded-2xl shadow-2xl flex flex-col items-center justify-between relative bg-white/90 backdrop-blur-md h-full">
+          {/* Chat Header Actions */}
+          <div className="w-[95%] pt-3 flex items-center justify-between border-b border-border/40 pb-2">
+            <span className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+              Study Buddy AI Assistant
+            </span>
+            {messages.length > 1 && (
+              <Dialog open={isClearChatDialogOpen} onOpenChange={setIsClearChatDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="h-6 text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Clear Chat
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Clear Chat History?</DialogTitle>
+                    <DialogDescription>
+                      This will permanently remove your AI conversation history from your account.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="flex justify-end gap-2 pt-2">
+                    <DialogClose asChild>
+                      <Button variant="outline" size="sm">Cancel</Button>
+                    </DialogClose>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleClearChatHistory}
+                    >
+                      Clear History
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+
           {/* Chat Messages Area */}
-          <ScrollArea className="w-[90%] flex flex-col h-[80%] rounded px-2">
-            <ScrollBar/>
+          <ScrollArea className="w-[90%] flex flex-col h-[75%] rounded px-2">
+            <ScrollBar />
             <div className="flex flex-col space-y-4 py-4">
               {messages.map((msg, index) => (
                 <Bubble
-                  key={index}
+                  key={msg.id || index}
                   variant={msg.role === "user" ? "muted" : "default"}
                   align={msg.role === "user" ? "end" : "start"}
-                  className={`text-xl ${msg.role === "user" ? "ml-30 text-right" : "mr-30 text-left text-gray-900 dark:text-white"}`}
+                  className={`text-xl ${
+                    msg.role === "user"
+                      ? "ml-30 text-right"
+                      : "mr-30 text-left text-gray-900 dark:text-white"
+                  }`}
                 >
                   <BubbleContent>{msg.content}</BubbleContent>
                 </Bubble>
@@ -637,21 +1184,30 @@ export default function Home() {
               className="bg-black/50 w-full backdrop-blur-xs shadow-xl py-4 rounded-3xl focus:bg-black duration-200 px-6 text-white resize-none outline-none min-h-[50px] max-h-[120px]"
               placeholder="What would you like to know?"
             />
-            <Button type="submit" disabled={isLoading} className="rounded-full h-12 w-12 shrink-0">
-              <SendHorizontal/>
+            <Button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="rounded-full h-12 w-12 shrink-0 cursor-pointer"
+            >
+              <SendHorizontal />
             </Button>
           </form>
         </div>
 
+        {/* Right Column: To-Do List & Documents / Music Player */}
         <div className="rounded-2xl w-[25vw] flex flex-col">
           <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md h-[55vh] w-[25vw] rounded-2xl shadow-2xl overflow-hidden">
             <Tabs defaultValue="todo" className="rounded-2xl p-5 h-full flex flex-col">
               <TabsList>
-                <TabsTrigger value="todo"><CircleCheckBig/>To-Do</TabsTrigger>
-                <TabsTrigger value="docs"><Files/>Documents</TabsTrigger>
+                <TabsTrigger value="todo">
+                  <CircleCheckBig className="mr-1.5 h-4 w-4" /> To-Do
+                </TabsTrigger>
+                <TabsTrigger value="docs">
+                  <Files className="mr-1.5 h-4 w-4" /> Documents
+                </TabsTrigger>
               </TabsList>
-              
-              {/* Integrated To-Do List Area */}
+
+              {/* To-Do List Area */}
               <TabsContent value="todo" className="flex-1 flex flex-col min-h-0 pt-3 space-y-3">
                 <form onSubmit={handleAddTask} className="flex gap-2">
                   <Input
@@ -673,7 +1229,7 @@ export default function Home() {
 
                 <ScrollArea className="flex-1 pr-2">
                   {tasks.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-sm border text-foreground border-dashed rounded-lg">
+                    <div className="flex items-center justify-center h-full text-sm border text-foreground border-dashed rounded-lg py-8">
                       All Done!
                     </div>
                   ) : (
@@ -685,11 +1241,14 @@ export default function Home() {
                         >
                           <div
                             className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer"
-                            onClick={() => handleToggleTask(task.id)}
+                            onClick={() => handleToggleTask(task.id, task.completed)}
                           >
                             <Checkbox
                               checked={task.completed}
-                              onCheckedChange={() => handleToggleTask(task.id)} className="border-foreground/50"
+                              onCheckedChange={() =>
+                                handleToggleTask(task.id, task.completed)
+                              }
+                              className="border-foreground/50"
                             />
                             <span
                               className={`text-sm truncate transition-all ${
@@ -717,13 +1276,17 @@ export default function Home() {
                 </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="docs" className="flex-1 flex flex-col min-h-0 pt-2 overflow-hidden">
+              {/* Documents Area (Firebase Storage + Firestore) */}
+              <TabsContent
+                value="docs"
+                className="flex-1 flex flex-col min-h-0 pt-2 overflow-hidden"
+              >
                 <div className="text-black dark:text-white flex flex-col h-full overflow-hidden">
                   <div className="w-full max-w-2xl flex flex-col h-full overflow-hidden">
-                    {/* Upload Area */}
+                    {/* Drag & Drop Upload Zone */}
                     <div
                       className={cn(
-                        "rounded-lg relative border flex flex-row justify-center border-dashed p-4 text-center shrink-0 transition-colors",
+                        "rounded-lg relative border flex flex-row justify-center border-dashed p-4 text-center shrink-0 transition-colors cursor-pointer",
                         isDragging
                           ? "border-primary bg-primary/5"
                           : "border-muted-foreground/25 hover:border-muted-foreground/50"
@@ -732,153 +1295,224 @@ export default function Home() {
                       onDragLeave={handleDragLeave}
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}
+                      onClick={openFileDialog}
                     >
                       <input {...getInputProps()} className="sr-only" />
 
                       <div className="flex flex-row items-center gap-4">
                         <div
                           className={cn(
-                            "flex items-center justify-center rounded-full",
+                            "flex items-center justify-center rounded-full p-1",
                             isDragging ? "bg-primary/10" : "bg-none"
                           )}
                         >
                           <UploadIcon
                             className={cn(
-                              "",
+                              "h-5 w-5",
                               isDragging ? "text-primary" : "text-muted-foreground"
                             )}
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <p className="text-md font-semibold">Upload your files</p>
+                        <div className="space-y-0.5 text-left">
+                          <p className="text-sm font-semibold">Upload your files</p>
+                          <p className="text-xs text-muted-foreground">Up to 10MB per file</p>
                         </div>
 
-                        <Button onClick={openFileDialog}>
-                          <UploadIcon className="h-4 w-4 " />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openFileDialog();
+                          }}
+                          className="ml-auto"
+                        >
+                          <UploadIcon className="h-3.5 w-3.5 mr-1" />
                           Select
                         </Button>
                       </div>
                     </div>
 
-                    {/* Upload Stats */}
-                    {uploadFiles.length > 0 && (
-                      <div className="mt-6 flex items-center justify-between ">
-                        <div className="flex items-center gap-1 ">
-                          <h4 className="text-sm font-medium">Files</h4>
-                          <div className="flex items-center justify-center gap-1">
-                            {completedCount > 0 && (
+                    {/* Upload Stats & Clear All Button */}
+                    {(uploadedDocs.length > 0 || uploadingQueue.length > 0) && (
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-xs font-semibold uppercase text-muted-foreground">Files</h4>
+                          <div className="flex items-center gap-1">
+                            {uploadedDocs.length > 0 && (
                               <Badge size="sm" variant="success-light">
-                                Completed: {completedCount}
+                                Saved: {uploadedDocs.length}
                               </Badge>
                             )}
-                            {errorCount > 0 && (
-                              <Badge size="sm" variant="destructive">
-                                Failed: {errorCount}
-                              </Badge>
-                            )}
-                            {uploadingCount > 0 && (
+                            {uploadingQueue.length > 0 && (
                               <Badge size="sm" variant="secondary">
-                                Uploading: {uploadingCount}
+                                Uploading: {uploadingQueue.length}
                               </Badge>
                             )}
                           </div>
                         </div>
 
-                        <Button onClick={clearFiles} variant="outline" size="xs">
-                          Clear all
-                        </Button>
+                        {uploadedDocs.length > 0 && (
+                          <Dialog
+                            open={isClearAllDocsDialogOpen}
+                            onOpenChange={setIsClearAllDocsDialogOpen}
+                          >
+                            <DialogTrigger asChild>
+                              <Button variant="outline" size="xs">
+                                Clear all
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Delete All Documents?</DialogTitle>
+                                <DialogDescription>
+                                  This will permanently remove all your files from Firebase Storage.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter className="flex justify-end gap-2 pt-2">
+                                <DialogClose asChild>
+                                  <Button variant="outline" size="sm">Cancel</Button>
+                                </DialogClose>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={handleClearAllDocuments}
+                                >
+                                  Delete All
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        )}
                       </div>
                     )}
 
-                    {/* File List */}
-                    {uploadFiles.length > 0 && (
-                      <ScrollArea className="flex-1 mt-3 pr-3 overflow-y-auto">
-                        {uploadFiles.map((fileItem) => (
-                          <div
-                            key={fileItem.id}
-                            className="border-border overflow-auto my-2 bg-card rounded-lg border p-2.5"
-                          >
-                            <div className="flex items-start gap-2.5">
-                              {/* File Icon */}
-                              <div className="shrink-0">
-                                {fileItem.preview &&
-                                fileItem.file.type.startsWith("image/") ? (
-                                  <img
-                                    src={fileItem.preview}
-                                    alt={fileItem.file.name}
-                                    className="rounded-lg h-12 w-12 border object-cover"
-                                  />
-                                ) : (
-                                  <div className="border-border text-muted-foreground rounded-lg flex h-12 w-12 items-center justify-center border">
-                                    {getFileIcon(fileItem.file)}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* File Info */}
-                              <div className="min-w-0 flex-1 ">
-                                <div className="mt-0.75 flex items-center justify-between">
-                                  <p className="inline-flex flex-col justify-center gap-1 truncate font-medium">
-                                    <span className="text-sm">{fileItem.file.name}</span>
-                                    <span className="text-muted-foreground text-xs">
-                                      {formatBytes(fileItem.file.size)}
-                                    </span>
-                                  </p>
-                                  <div className="flex items-center gap-2">
-                                    {/* Remove Button */}
-                                    <Button
-                                      onClick={() => removeUploadFile(fileItem.id)}
-                                      variant="ghost"
-                                      size="icon"
-                                      className="text-muted-foreground size-6 hover:bg-transparent hover:opacity-100"
-                                    >
-                                      <XIcon className="size-4" />
-                                    </Button>
-                                  </div>
+                    {/* Combined Documents List: Live Uploading + Firestore Saved */}
+                    <ScrollArea className="flex-1 mt-2 pr-3 overflow-y-auto">
+                      {uploadedDocs.length === 0 && uploadingQueue.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-40 border border-dashed rounded-lg text-center p-4 my-2">
+                          <Files className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                          <p className="text-xs font-medium text-muted-foreground">
+                            No documents uploaded yet.
+                          </p>
+                          <p className="text-[11px] text-muted-foreground/70">
+                            Files you upload are securely saved to your account.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 pb-2">
+                          {/* 1. Uploading Files in Progress */}
+                          {uploadingQueue.map((item) => (
+                            <div
+                              key={item.id}
+                              className="border-border bg-card rounded-lg border p-2.5 shadow-xs"
+                            >
+                              <div className="flex items-start gap-2.5">
+                                <div className="shrink-0 text-muted-foreground rounded-lg flex h-10 w-10 items-center justify-center border border-border">
+                                  {getFileIcon(item.file)}
                                 </div>
-
-                                {/* Progress Bar */}
-                                {fileItem.status === "uploading" && (
-                                  <div className="mt-2">
-                                    <Progress value={fileItem.progress} className="h-1" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <p className="inline-flex flex-col justify-center truncate font-medium">
+                                      <span className="text-xs truncate">{item.file.name}</span>
+                                      <span className="text-muted-foreground text-[10px]">
+                                        {formatBytes(item.file.size)} • Uploading...
+                                      </span>
+                                    </p>
                                   </div>
-                                )}
-
-                                {/* Error Message */}
-                                {fileItem.status === "error" && fileItem.error && (
-                                  <Alert variant="destructive" className="mt-2 px-2 py-1">
-                                    <CircleAlertIcon className="size-4" />
-                                    <AlertTitle className="text-xs">
-                                      {fileItem.error}
-                                    </AlertTitle>
-                                    <AlertAction>
-                                      <Button
-                                        onClick={() => retryUpload(fileItem.id)}
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-muted-foreground size-6 hover:bg-transparent hover:opacity-100"
-                                      >
-                                        <RefreshCwIcon className="size-3.5" />
-                                      </Button>
-                                    </AlertAction>
-                                  </Alert>
-                                )}
+                                  <div className="mt-2">
+                                    <Progress value={item.progress} className="h-1.5" />
+                                  </div>
+                                  {item.status === "error" && item.error && (
+                                    <Alert variant="destructive" className="mt-2 px-2 py-1">
+                                      <CircleAlertIcon className="size-3.5" />
+                                      <AlertTitle className="text-xs">{item.error}</AlertTitle>
+                                    </Alert>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </ScrollArea>
-                    )}
+                          ))}
 
-                    {/* Error Messages */}
-                    {errors.length > 0 && (
-                      <Alert variant="destructive" className="mt-5">
+                          {/* 2. Uploaded & Stored Documents */}
+                          {uploadedDocs.map((docItem) => (
+                            <div
+                              key={docItem.id}
+                              className="border-border bg-card rounded-lg border p-2.5 shadow-xs hover:border-primary/40 transition-colors group"
+                            >
+                              <div className="flex items-start gap-2.5">
+                                <div className="shrink-0">
+                                  {docItem.downloadUrl &&
+                                  (docItem.type || "").startsWith("image/") ? (
+                                    <img
+                                      src={docItem.downloadUrl}
+                                      alt={docItem.name}
+                                      className="rounded-lg h-10 w-10 border object-cover"
+                                    />
+                                  ) : (
+                                    <div className="border-border text-muted-foreground rounded-lg flex h-10 w-10 items-center justify-center border">
+                                      {getFileIcon(docItem)}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <div className="min-w-0 pr-2">
+                                      <a
+                                        href={docItem.downloadUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-medium text-foreground hover:text-primary truncate block hover:underline"
+                                        title={docItem.name}
+                                      >
+                                        {docItem.name}
+                                      </a>
+                                      <span className="text-muted-foreground text-[10px]">
+                                        {formatBytes(docItem.size)}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1">
+                                      {docItem.downloadUrl && (
+                                        <a
+                                          href={docItem.downloadUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-muted-foreground hover:text-primary p-1 rounded transition-colors"
+                                          title="Open / Download"
+                                        >
+                                          <ExternalLink className="h-3.5 w-3.5" />
+                                        </a>
+                                      )}
+                                      <Button
+                                        onClick={() => handleDeleteDocument(docItem)}
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                        title="Delete file"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+
+                    {/* File Error Alerts */}
+                    {activeErrors.length > 0 && (
+                      <Alert variant="destructive" className="mt-3">
                         <CircleAlertIcon />
-                        <AlertTitle>File upload error(s)</AlertTitle>
+                        <AlertTitle>Upload Issue</AlertTitle>
                         <AlertDescription>
-                          {errors.map((error, index) => (
-                            <p key={index} className="last:mb-0">
+                          {activeErrors.map((error, index) => (
+                            <p key={index} className="text-xs last:mb-0">
                               {error}
                             </p>
                           ))}
@@ -890,8 +1524,10 @@ export default function Home() {
               </TabsContent>
             </Tabs>
           </div>
+
+          {/* Bottom Music Player */}
           <div className="h-[26.5vh] shadow-2xl backdrop-blur-md rounded-2xl mt-5">
-            <AudioPlayer/>
+            <AudioPlayer />
           </div>
         </div>
       </div>

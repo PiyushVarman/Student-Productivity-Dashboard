@@ -16,6 +16,8 @@ export function useFileUpload({
   multiple = true,
   initialFiles = [],
   onFilesChange,
+  onFilesSelected,
+  currentFilesCount = 0,
 } = {}) {
   const [files, setFiles] = useState(
     initialFiles.map((file) => ({
@@ -32,7 +34,8 @@ export function useFileUpload({
     const newErrors = []
     const validFiles = []
 
-    if (files.length + incomingFiles.length > maxFiles) {
+    const count = (currentFilesCount > 0 ? currentFilesCount : files.length) + incomingFiles.length
+    if (count > maxFiles) {
       newErrors.push(`You can only upload a maximum of ${maxFiles} files.`)
       return { validFiles: [], errors: newErrors }
     }
@@ -60,6 +63,7 @@ export function useFileUpload({
       const updated = multiple ? [...files, ...validFiles] : validFiles
       setFiles(updated)
       onFilesChange?.(updated)
+      onFilesSelected?.(validFiles.map((v) => v.file))
     }
   }
 
@@ -116,6 +120,7 @@ export function useFileUpload({
       if (e.target.files && e.target.files.length > 0) {
         addFiles(e.target.files)
       }
+      e.target.value = ""
     },
   })
 

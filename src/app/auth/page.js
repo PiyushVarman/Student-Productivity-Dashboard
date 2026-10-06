@@ -16,12 +16,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { auth, isFirebaseConfigured } from "@/lib/firebase";
+import { auth, db, isFirebaseConfigured } from "@/lib/firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
 } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -140,6 +141,22 @@ export default function AuthPage() {
         } else {
           const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
           const user = userCredential.user;
+
+          // Initialize user profile in Firestore
+          try {
+            await setDoc(doc(db, "users", user.uid), {
+              name: email.split("@")[0],
+              username: "@" + email.split("@")[0],
+              email: user.email,
+              theme: isDarkMode ? "dark" : "light",
+              backgroundImage: "",
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
+          } catch (initErr) {
+            console.warn("Firestore profile initialization warning:", initErr);
+          }
+
           setSuccessMessage("Account created successfully! Entering your dashboard...");
           if (typeof window !== "undefined") {
             localStorage.setItem(
