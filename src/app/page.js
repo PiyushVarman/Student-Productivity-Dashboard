@@ -809,7 +809,7 @@ export default function Home() {
                 </TabsTrigger>
                 <TabsTrigger value="rewards">
                   <Trophy className="mr-1.5 h-4 w-4" />
-                  Rewards
+                  Progress
                 </TabsTrigger>
                 <TabsTrigger value="personalization">
                   <Palette className="mr-1.5 h-4 w-4" />
@@ -818,16 +818,16 @@ export default function Home() {
               </TabsList>
 
               {/* User Settings Tab */}
-              <TabsContent value="userset" className="p-8 w-full max-w-2xl">
-                <DialogHeader>
+              <TabsContent value="userset" className="p-8 w-full max-w-full flex flex-col items-center ">
+                <DialogHeader className="flex flex-col w-[60%]">
                   <DialogTitle>Edit Profile</DialogTitle>
                   <DialogDescription>
                     Update your personal profile and preferences. Updates are saved to your secure account.
                   </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSaveProfile} className="space-y-6 py-6">
-                  <FieldGroup className="space-y-4">
+                <form onSubmit={handleSaveProfile} className="space-y-6 py-6 ">
+                  <FieldGroup className="space-y-4 w-[50vw]">
                     <Field>
                       <Label htmlFor="name-input">Full Name</Label>
                       <Input
@@ -913,27 +913,27 @@ export default function Home() {
               {/* Rewards Tab */}
               <TabsContent value="rewards" className="p-8 w-full max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Study Rewards & Milestones</DialogTitle>
+                  <DialogTitle>Progress</DialogTitle>
                   <DialogDescription>
                     Track your streak, study habits, and badges earned.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-2 gap-4 py-6">
-                  <div className="p-4 rounded-xl border bg-muted/40 flex flex-col gap-1">
+                <div className="grid grid-cols-2 gap-4 py-6 *:hover:shadow-black *:dark:hover:shadow-white *:hover:shadow-lg/10 *:duration-200">
+                  <div className="p-4 rounded-xl  bg-muted/40 flex flex-col gap-1">
                     <span className="text-xs font-semibold text-muted-foreground uppercase">Tasks Completed</span>
                     <span className="text-2xl font-bold">{tasks.filter((t) => t.completed).length} Tasks</span>
                   </div>
-                  <div className="p-4 rounded-xl border bg-muted/40 flex flex-col gap-1">
+                  <div className="p-4 rounded-xl bg-muted/40 flex flex-col gap-1">
                     <span className="text-xs font-semibold text-muted-foreground uppercase">Journal Entries</span>
                     <span className="text-2xl font-bold">{journalEntries.length} Entries</span>
                   </div>
-                  <div className="p-4 rounded-xl border bg-muted/40 flex flex-col gap-1">
+                  <div className="p-4 rounded-xl bg-muted/40 flex flex-col gap-1">
                     <span className="text-xs font-semibold text-muted-foreground uppercase">Documents Stored</span>
                     <span className="text-2xl font-bold">{uploadedDocs.length} Files</span>
                   </div>
-                  <div className="p-4 rounded-xl border bg-muted/40 flex flex-col gap-1">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase">AI Study Queries</span>
-                    <span className="text-2xl font-bold">{messages.filter(m => m.role === 'user').length} Questions</span>
+                  <div className="p-4 rounded-xl  bg-muted/40 flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">ChatBot Usage</span>
+                    <span className="text-2xl font-bold">{messages.filter(m => m.role === 'user').length} Prompts</span>
                   </div>
                 </div>
               </TabsContent>
@@ -955,7 +955,7 @@ export default function Home() {
                 </div>
 
                 <Carousel className="w-[70vw]">
-                  <CarouselContent className="*:select-none">
+                  <CarouselContent className="*:select-none p-10">
                     {WALLPAPERS.map((wp) => (
                       <CarouselItem key={wp.id} className="w-[10vw]! basis-1/3">
                         <div
@@ -1006,8 +1006,8 @@ export default function Home() {
               </div>
             </TabsContent>
 
-            <TabsContent value="journal" className="h-full! pt-2">
-              <div className="flex flex-col bg-gray-100 dark:bg-zinc-800/90 rounded-xl p-4 shadow h-125 justify-between">
+            <TabsContent value="journal" className="relative pt-2">
+              <div className="flex flex-col bg-gray-100 dark:bg-zinc-800/90 rounded-xl p-4 shadow h-[72.5vh]">
                 {/* Top Row: Title & View Past Entries Dialog Button */}
                 <div className="flex items-center justify-between pb-2">
                   <span className="text-sm font-semibold text-foreground">Daily Journal</span>
@@ -1022,7 +1022,7 @@ export default function Home() {
                         Past Entries ({journalEntries.length})
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="w-[80vw] max-w-lg max-h-[80vh] flex flex-col">
+                    <DialogContent className="w-[80vw] max-w-lg max-h-[80vh] h-full overflow-hidden flex flex-col">
                       <DialogHeader>
                         <DialogTitle>Journal History</DialogTitle>
                         <DialogDescription>
@@ -1034,17 +1034,17 @@ export default function Home() {
                         </DialogDescription>
                       </DialogHeader>
 
-                      <ScrollArea className="flex-1 max-h-[50vh] pr-4 my-2">
+                      <ScrollArea className="flex-1 max-h-[57.5vh] pr-4 my-2 " >
                         {journalEntries.length === 0 ? (
                           <p className="text-sm text-muted-foreground text-center py-8">
                             No journal entries yet. Start logging your thoughts!
                           </p>
                         ) : (
-                          <div className="space-y-3">
+                          <div className="space-y-3 ">
                             {journalEntries.map((entry) => (
                               <div
                                 key={entry.id}
-                                className="p-3 rounded-lg border bg-background/50 flex flex-col gap-1 relative group"
+                                className="p-3 rounded-lg dark:hover:shadow-white hover:shadow-lg/10 hover:scale-101 duration-200 bg-background/50 flex flex-col gap-1 relative group"
                               >
                                 <div className="flex items-center justify-between">
                                   <span className="text-xs font-semibold text-muted-foreground">
@@ -1105,7 +1105,7 @@ export default function Home() {
         <div className="dark:bg-zinc-900/90 w-[60%] rounded-2xl shadow-2xl flex flex-col items-center justify-between relative bg-white/90 backdrop-blur-md h-full">
           {/* Chat Header Actions */}
           <div className="w-[95%] pt-3 flex items-center justify-between border-b border-border/40 pb-2">
-            <span className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+            <span className="text-xs font-semibold  text-muted-foreground tracking-wide uppercase">
               Study Buddy AI Assistant
             </span>
             {messages.length > 1 && (
@@ -1145,8 +1145,7 @@ export default function Home() {
           </div>
 
           {/* Chat Messages Area */}
-          <ScrollArea className="w-[90%] flex flex-col h-[75%] rounded px-2">
-            <ScrollBar />
+          <ScrollArea className="w-[90%] flex flex-col h-[75%] rounded px-5">
             <div className="flex flex-col space-y-4 py-4">
               {messages.map((msg, index) => (
                 <Bubble
