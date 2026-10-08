@@ -1024,11 +1024,11 @@ export default function Home() {
 
                                     <div className="flex items-center gap-1">
                                       {docItem.downloadUrl && (
-                                        <a href={docItem.downloadUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary scale-70 rounded transition-colors" title="Download">
-                                          <Download e="h-3.5 w-3.5" />
+                                        <a href={docItem.downloadUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary rounded transition-colors" title="Download">
+                                          <Download className="h-3.5 w-3.5" />
                                         </a>
                                       )}
-                                      <Button onClick={() => handleDeleteDocument(docItem)} variant="ghost" size="icon" e="h-6 w-6 text-muted-foreground hover:text-destructive" title="Delete file">
+                                      <Button onClick={() => handleDeleteDocument(docItem)} variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" title="Delete file">
                                         <Trash2 className="h-3.5 w-3.5" />
                                       </Button>
                                     </div>
