@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Play, Pause, RotateCcw, Settings, Flame, Coffee } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-export default function PomodoroTimer() {
+export default function PomodoroTimer({ onFocusComplete }) {
   // Durations stored in minutes
   const [focusMinutes, setFocusMinutes] = useState(25);
   const [breakMinutes, setBreakMinutes] = useState(5);
@@ -32,6 +32,11 @@ export default function PomodoroTimer() {
   const [timeLeft, setTimeLeft] = useState(25 * 60); // seconds
   const [isActive, setIsActive] = useState(false);
 
+  const onFocusCompleteRef = useRef(onFocusComplete);
+  useEffect(() => {
+    onFocusCompleteRef.current = onFocusComplete;
+  }, [onFocusComplete]);
+
   const totalDuration = (mode === "focus" ? focusMinutes : breakMinutes) * 60;
 
   // Tick interval handler
@@ -42,6 +47,10 @@ export default function PomodoroTimer() {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
     } else if (timeLeft === 0) {
+      // Award XP if focus timer hits 00:00 (no reward from break timer)
+      if (mode === "focus" && onFocusCompleteRef.current) {
+        onFocusCompleteRef.current(focusMinutes);
+      }
       // Auto-switch mode on complete
       const nextMode = mode === "focus" ? "break" : "focus";
       const nextDuration = (nextMode === "focus" ? focusMinutes : breakMinutes) * 60;

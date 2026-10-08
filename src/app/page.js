@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { getRequiredXpForLevel, calculateXpChange } from "@/lib/xp";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -84,6 +85,14 @@ export default function Home() {
   const [isClearAllDocsDialogOpen, setIsClearAllDocsDialogOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
 
+  // XP & Progression State
+  const [userLevel, setUserLevel] = useState(1);
+  const [userXp, setUserXp] = useState(0);
+  const userLevelRef = useRef(1);
+  const userXpRef = useRef(0);
+  const [levelUpNotification, setLevelUpNotification] = useState(null);
+  const levelUpTimeoutRef = useRef(null);
+
   // 1. Monitor Authentication State
   useEffect(() => {
     if (!auth) {
@@ -105,6 +114,13 @@ export default function Home() {
             setProfileName(loadedName);
             setProfileUsername(loadedUsername);
 
+            const loadedLevel = data.level !== undefined ? Number(data.level) : 1;
+            const loadedXp = data.xp !== undefined ? Number(data.xp) : 0;
+            setUserLevel(loadedLevel);
+            setUserXp(loadedXp);
+            userLevelRef.current = loadedLevel;
+            userXpRef.current = loadedXp;
+
             if (data.theme) {
               const shouldBeDark = data.theme === "dark";
               setIsDarkMode(shouldBeDark);
@@ -123,6 +139,10 @@ export default function Home() {
             const defaultUsername = "@" + (user.email?.split("@")[0] || "student");
             setProfileName(defaultName);
             setProfileUsername(defaultUsername);
+            setUserLevel(1);
+            setUserXp(0);
+            userLevelRef.current = 1;
+            userXpRef.current = 0;
 
             await setDoc(
               userRef,
@@ -132,6 +152,8 @@ export default function Home() {
                 email: user.email,
                 theme: isDarkMode ? "dark" : "light",
                 backgroundImage: backgroundImage || "",
+                level: 1,
+                xp: 0,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
               },
@@ -156,6 +178,22 @@ export default function Home() {
   // 2. Real-time Listeners for User's Isolated Data (Firestore)
   useEffect(() => {
     if (!currentUser || !db) return;
+
+    const unsubUser = onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.level !== undefined) {
+          const lvl = Number(data.level);
+          setUserLevel(lvl);
+          userLevelRef.current = lvl;
+        }
+        if (data.xp !== undefined) {
+          const xpVal = Number(data.xp);
+          setUserXp(xpVal);
+          userXpRef.current = xpVal;
+        }
+      }
+    });
 
     const journalsQuery = query(collection(db, "users", currentUser.uid, "journalEntries"), orderBy("createdAt", "desc"));
     const unsubJournals = onSnapshot(journalsQuery, (snapshot) => {
@@ -186,12 +224,70 @@ export default function Home() {
     });
 
     return () => {
+      unsubUser();
       unsubJournals();
       unsubChats();
       unsubTasks();
       unsubDocs();
     };
   }, [currentUser]);
+
+  // Trigger Level Up Toast Notification
+  const triggerLevelUpToast = useCallback((newLevel) => {
+    if (levelUpTimeoutRef.current) {
+      clearTimeout(levelUpTimeoutRef.current);
+    }
+    setLevelUpNotification(newLevel);
+    levelUpTimeoutRef.current = setTimeout(() => {
+      setLevelUpNotification(null);
+    }, 4500);
+  }, []);
+
+  // Apply XP Change (positive or negative)
+  const applyXpChange = useCallback(
+    async (amount) => {
+      if (!currentUser || !db) return;
+
+      const currentLvl = userLevelRef.current;
+      const currentExp = userXpRef.current;
+      const { level: newLevel, xp: newXp, leveledUp } = calculateXpChange(currentLvl, currentExp, amount);
+
+      userLevelRef.current = newLevel;
+      userXpRef.current = newXp;
+      setUserLevel(newLevel);
+      setUserXp(newXp);
+
+      if (leveledUp) {
+        triggerLevelUpToast(newLevel);
+      }
+
+      try {
+        await setDoc(
+          doc(db, "users", currentUser.uid),
+          {
+            level: newLevel,
+            xp: newXp,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error("Failed to update XP in Firestore:", err);
+      }
+    },
+    [currentUser, triggerLevelUpToast]
+  );
+
+  // Focus Session Complete Handler (1.5 XP per minute on 00:00 completion)
+  const handleFocusSessionComplete = useCallback(
+    (minutes) => {
+      const xpAwarded = Math.round(Number(minutes) * 1.5 * 10) / 10;
+      if (xpAwarded > 0) {
+        applyXpChange(xpAwarded);
+      }
+    },
+    [applyXpChange]
+  );
 
   // 3. Live Date & Time Clock
   useEffect(() => {
@@ -317,6 +413,7 @@ export default function Home() {
         timestamp: currentDateTime,
         createdAt: serverTimestamp(),
       });
+      applyXpChange(5);
     } catch (err) {
       console.error("Failed to save journal:", err);
       setJournalText(textToSave);
@@ -327,6 +424,7 @@ export default function Home() {
     if (!currentUser || !db) return;
     try {
       await deleteDoc(doc(db, "users", currentUser.uid, "journalEntries", id));
+      applyXpChange(-5);
     } catch (err) {
       console.error("Failed to delete journal entry:", err);
     }
@@ -339,6 +437,9 @@ export default function Home() {
     const userText = input.trim();
     setInput("");
     setIsLoading(true);
+
+    // Prompting the chatbot gives +5 XP
+    applyXpChange(5);
 
     try {
       await addDoc(collection(db, "users", currentUser.uid, "chats"), {
@@ -412,9 +513,16 @@ export default function Home() {
   const handleToggleTask = async (taskId, currentCompleted) => {
     if (!currentUser || !db) return;
     try {
+      const nextCompleted = !currentCompleted;
       await updateDoc(doc(db, "users", currentUser.uid, "todos", taskId), {
-        completed: !currentCompleted,
+        completed: nextCompleted,
       });
+      // Task completion +15 XP, unchecking -15 XP
+      if (nextCompleted) {
+        applyXpChange(15);
+      } else {
+        applyXpChange(-15);
+      }
     } catch (err) {
       console.error("Failed to toggle task:", err);
     }
@@ -638,16 +746,40 @@ export default function Home() {
 
   return (
     <div style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}} className={`flex flex-col flex-1 min-h-screen items-center justify-start font-sans transition-all duration-300 ${backgroundImage ? "bg-cover bg-center bg-no-repeat bg-fixed" : "bg-gray-200 dark:bg-black/50"}`}>
+      {/* Level Up Notification Pop-up */}
+      {levelUpNotification && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto">
+          <div className="flex items-center gap-2.5 px-5 py-2.5 bg-zinc-900/95 dark:bg-zinc-100/95 text-white dark:text-zinc-900 backdrop-blur-md rounded-full shadow-2xl border border-white/20 dark:border-black/20 text-sm font-semibold">
+            <Trophy className="h-4 w-4 text-amber-400 animate-bounce" />
+            <span>Level Up! You reached Level {levelUpNotification}!</span>
+            <button
+              onClick={() => setLevelUpNotification(null)}
+              className="ml-2 p-0.5 hover:bg-white/20 dark:hover:bg-black/20 rounded-full transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="w-[99vw] flex flex-row items-center justify-between px-4 my-3">
         <div className="text-black pl-[1vw] text-left dark:text-shadow-sm/50 dark:text-white leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides'] rounded-xl">
           Study Buddy
         </div>
 
-        <Dialog>
-          <Tooltip>
-            <DialogTrigger render={<TooltipTrigger render={<Button className="rounded-3xl bg-white dark:bg-zinc-800 text-black dark:text-white w-12 h-12 p-2 text-2xl text-center shadow-lg hover:scale-105 transition-all">🧑</Button>}/>}/>
-            <TooltipContent>User Profile & Settings</TooltipContent>
-          </Tooltip>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md border border-border/50 shadow-sm text-xs font-semibold text-foreground">
+            <Trophy className="h-3.5 w-3.5 text-amber-500" />
+            <span>Lvl {userLevel}</span>
+            <span className="text-muted-foreground font-normal">• {userXp}/{getRequiredXpForLevel(userLevel)} XP</span>
+          </div>
+
+          <Dialog>
+            <Tooltip>
+              <DialogTrigger render={<TooltipTrigger render={<Button className="rounded-3xl bg-white dark:bg-zinc-800 text-black dark:text-white w-12 h-12 p-2 text-2xl text-center shadow-lg hover:scale-105 transition-all">🧑</Button>}/>}/>
+              <TooltipContent>User Profile & Settings (Level {userLevel})</TooltipContent>
+            </Tooltip>
           <DialogContent className="h-max min-h-90 w-[90vw] !max-w-none">
             <Tabs defaultValue="userset" className="flex items-center">
               <TabsList className="flex gap-x-3">
@@ -723,9 +855,42 @@ export default function Home() {
               <TabsContent value="rewards" className="p-8 w-full max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Progress</DialogTitle>
-                  <DialogDescription>Track your streak, study habits, and badges earned.</DialogDescription>
+                  <DialogDescription>Track your streak, study habits, and level progression.</DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-2 gap-4 py-6 *:hover:shadow-black *:dark:hover:shadow-white *:hover:shadow-lg/10 *:duration-200">
+
+                <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col gap-2.5 my-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary text-primary-foreground font-bold text-base shadow-xs">
+                        {userLevel}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-foreground">Level {userLevel}</h4>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold uppercase tracking-wider">
+                            Rank
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {userXp >= getRequiredXpForLevel(userLevel)
+                            ? "Ready to level up!"
+                            : `${Math.round((getRequiredXpForLevel(userLevel) - userXp) * 10) / 10} XP needed to reach Level ${userLevel + 1}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-mono font-semibold text-foreground">
+                        {userXp} / {getRequiredXpForLevel(userLevel)} XP
+                      </span>
+                    </div>
+                  </div>
+                  <Progress
+                    value={Math.max(0, Math.min(100, (userXp / getRequiredXpForLevel(userLevel)) * 100))}
+                    className="h-2"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 py-2 *:hover:shadow-black *:dark:hover:shadow-white *:hover:shadow-lg/10 *:duration-200">
                   <div className="p-4 rounded-xl bg-muted/40 flex flex-col gap-1">
                     <span className="text-xs font-semibold text-muted-foreground uppercase">Tasks Completed</span>
                     <span className="text-2xl font-bold">{tasks.filter((t) => t.completed).length} Tasks</span>
@@ -776,6 +941,7 @@ export default function Home() {
             </Tabs>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="mt-2 w-[99vw] h-[84vh] items-start *:dark:text-black flex flex-row gap-x-5 *:duration-500">
@@ -790,13 +956,13 @@ export default function Home() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="focus">
+            <TabsContent value="focus" keepMounted>
               <div className="flex grow bg-gray-300 shadow-md hover:scale-101 duration-200 animate-out rounded-xl h-full items-center justify-center">
-                <PomodoroTimer />
+                <PomodoroTimer onFocusComplete={handleFocusSessionComplete} />
               </div>
             </TabsContent>
 
-            <TabsContent value="journal" className="relative pt-2">
+            <TabsContent value="journal" keepMounted className="relative pt-2">
               <div className="flex flex-col bg-gray-100 dark:bg-zinc-800/90 rounded-xl p-4 shadow h-[72.5vh]">
                 <div className="flex items-center justify-between pb-2">
                   <span className="text-sm font-semibold text-foreground">Daily Journal</span>

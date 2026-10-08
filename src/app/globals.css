@@ -126,6 +126,9 @@
 }
 
 @layer base {
+  [hidden] {
+    display: none !important;
+  }
   *{
     @apply font-sans;
   }
