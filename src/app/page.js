@@ -82,6 +82,7 @@ export default function Home() {
   const [uploadingQueue, setUploadingQueue] = useState([]);
   const [fileErrors, setFileErrors] = useState([]);
   const [isClearAllDocsDialogOpen, setIsClearAllDocsDialogOpen] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   // 1. Monitor Authentication State
   useEffect(() => {
@@ -559,6 +560,68 @@ export default function Home() {
     return <FileTextIcon className="size-4" />;
   };
 
+  // --- Document preview helpers ---
+  const getFileExt = (name = "") => (name.includes(".") ? name.split(".").pop().toLowerCase() : "");
+
+  const renderPreview = (docItem) => {
+    const type = docItem.type || "";
+    const ext = getFileExt(docItem.name);
+    const url = docItem.downloadUrl;
+
+    const isImage = type.startsWith("image/");
+    const isPdf = type === "application/pdf" || ext === "pdf";
+    const isVideo = type.startsWith("video/");
+    const isAudio = type.startsWith("audio/");
+    const isPlainText = type === "text/plain" || ext === "txt";
+    const isOffice = ["doc", "docx", "ppt", "pptx", "xls", "xlsx"].includes(ext) || /officedocument|msword|ms-excel|ms-powerpoint/.test(type);
+
+    if (!url) {
+      return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">This file has no download link.</div>;
+    }
+
+    if (isImage) {
+      return (
+        <div className="flex h-full w-full items-center justify-center overflow-auto">
+          <img src={url} alt={docItem.name} className="max-h-full max-w-full object-contain rounded-md" />
+        </div>
+      );
+    }
+
+    if (isPdf) {
+      return <iframe src={`${url}#view=FitH`} title={docItem.name} className="h-full w-full rounded-md shadow-lg/10 dark:shadow-white bg-white" />;
+    }
+
+    if (isPlainText) {
+      return <iframe src={url} title={docItem.name} className="h-full w-full rounded-md border bg-white" />;
+    }
+
+    if (isVideo) {
+      return <video src={url} controls className="h-full w-full rounded-md bg-black" />;
+    }
+
+    if (isAudio) {
+      return (
+        <div className="flex h-full items-center justify-center">
+          <audio src={url} controls className="w-full max-w-md" />
+        </div>
+      );
+    }
+
+    if (isOffice) {
+      // Rendered by Microsoft's viewer, which needs a publicly reachable URL (Firebase download URLs qualify).
+      return <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`} title={docItem.name} className="h-full w-full rounded-md border bg-white" />;
+    }
+
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+        <p>No preview available for this file type.</p>
+        <Button size="sm" onClick={() => window.open(url, "_blank", "noopener,noreferrer")}>
+          <Download className="h-3.5 w-3.5 mr-1" /> Download
+        </Button>
+      </div>
+    );
+  };
+
   const activeErrors = [...hookValidationErrors, ...fileErrors];
 
   if (authLoading) {
@@ -1016,9 +1079,9 @@ export default function Home() {
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center justify-between">
                                     <div className="min-w-0 pr-2">
-                                      <a href={docItem.downloadUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-foreground hover:text-primary truncate block hover:underline" title={docItem.name}>
+                                      <button type="button" onClick={() => setPreviewDoc(docItem)} className="text-xs font-medium text-foreground hover:text-primary truncate block max-w-full text-left hover:underline cursor-pointer" title={`Preview ${docItem.name}`}>
                                         {docItem.name}
-                                      </a>
+                                      </button>
                                       <span className="text-muted-foreground text-[10px]">{formatBytes(docItem.size)}</span>
                                     </div>
 
@@ -1063,6 +1126,29 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Document Preview Dialog */}
+      <Dialog open={!!previewDoc} onOpenChange={(open) => { if (!open) setPreviewDoc(null); }}>
+        <DialogContent className="w-[95vw] h-[90vh] !max-w-5xl flex flex-col gap-3">
+          <DialogHeader>
+            <DialogTitle className="truncate pr-8">{previewDoc?.name}</DialogTitle>
+            <DialogDescription>{previewDoc ? formatBytes(previewDoc.size) : ""}</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0">{previewDoc && renderPreview(previewDoc)}</div>
+
+          <DialogFooter className="flex justify-end gap-2">
+            {previewDoc?.downloadUrl && (
+              <Button variant="outline" size="sm" onClick={() => window.open(previewDoc.downloadUrl, "_blank", "noopener,noreferrer")}>
+                <Download className="h-3.5 w-3.5 mr-1" /> Download
+              </Button>
+            )}
+            <DialogClose asChild>
+              <Button variant="outline" size="sm">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
