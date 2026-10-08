@@ -764,7 +764,7 @@ export default function Home() {
       )}
 
       <div className="w-[99vw] flex flex-row items-center justify-between px-4 my-3">
-        <div className="text-black pl-[1vw] text-left dark:text-shadow-sm/50 dark:text-white leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides'] rounded-xl">
+        <div className="text-black text-left dark:text-shadow-sm/50 dark:text-white leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides'] rounded-xl">
           Study Buddy
         </div>
 
