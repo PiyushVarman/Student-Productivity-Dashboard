@@ -6,35 +6,10 @@ import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
-import {
-  CircleCheckBig,
-  Files,
-  NotebookPen,
-  Timer,
-  Trophy,
-  User,
-  Moon,
-  Sun,
-  Palette,
-  Plus,
-  Trash2,
-  SendHorizontal,
-  LogOut,
-  ExternalLink,
-  CheckCircle2,
-  Loader2,
-} from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2, SendHorizontal, LogOut, Download, CheckCircle2, Loader2, CircleAlertIcon, FileArchiveIcon, FileSpreadsheetIcon, FileTextIcon, HeadphonesIcon, ImageIcon, RefreshCwIcon, UploadIcon, VideoIcon, XIcon } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import {
-  Dialog,
-  DialogTitle,
-  DialogHeader,
-  DialogDescription,
-  DialogTrigger,
-  DialogContent,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTitle, DialogHeader, DialogDescription, DialogTrigger, DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, Field } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
@@ -42,62 +17,19 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AudioPlayer } from "./musicplayer.js";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel.jsx";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel.jsx";
 import PomodoroTimer from "@/components/ui/PomodoroTimer.jsx";
 import { formatBytes, useFileUpload } from "@/hooks/use-file-upload";
-import {
-  Alert,
-  AlertAction,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
-import {
-  CircleAlertIcon,
-  FileArchiveIcon,
-  FileSpreadsheetIcon,
-  FileTextIcon,
-  HeadphonesIcon,
-  ImageIcon,
-  RefreshCwIcon,
-  UploadIcon,
-  VideoIcon,
-  XIcon,
-} from "lucide-react";
 
 // Firebase imports
 import { auth, db, storage, isFirebaseConfigured } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  collection,
-  addDoc,
-  deleteDoc,
-  updateDoc,
-  query,
-  orderBy,
-  onSnapshot,
-  serverTimestamp,
-  getDocs,
-  writeBatch,
-} from "firebase/firestore";
-import {
-  ref as storageRef,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from "firebase/storage";
+import { doc, getDoc, setDoc, collection, addDoc, deleteDoc, updateDoc, query, orderBy, onSnapshot, serverTimestamp, getDocs, writeBatch } from "firebase/firestore";
+import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
 const WALLPAPERS = [
   { id: "yourname", src: "/wallpapers/yourname.jpg", title: "Your Name", theme: "dark" },
@@ -161,7 +93,6 @@ export default function Home() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
-        // Load user profile from Firestore
         try {
           const userRef = doc(db, "users", user.uid);
           const userSnap = await getDoc(userRef);
@@ -187,7 +118,6 @@ export default function Home() {
               setBackgroundImage(data.backgroundImage || "");
             }
           } else {
-            // First time login - initialize profile document
             const defaultName = user.displayName || user.email?.split("@")[0] || "Student";
             const defaultUsername = "@" + (user.email?.split("@")[0] || "student");
             setProfileName(defaultName);
@@ -226,61 +156,31 @@ export default function Home() {
   useEffect(() => {
     if (!currentUser || !db) return;
 
-    // A. Journal Entries listener
-    const journalsQuery = query(
-      collection(db, "users", currentUser.uid, "journalEntries"),
-      orderBy("createdAt", "desc")
-    );
+    const journalsQuery = query(collection(db, "users", currentUser.uid, "journalEntries"), orderBy("createdAt", "desc"));
     const unsubJournals = onSnapshot(journalsQuery, (snapshot) => {
-      const entries = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
+      const entries = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
       setJournalEntries(entries);
     });
 
-    // B. AI Chats listener
-    const chatsQuery = query(
-      collection(db, "users", currentUser.uid, "chats"),
-      orderBy("createdAt", "asc")
-    );
+    const chatsQuery = query(collection(db, "users", currentUser.uid, "chats"), orderBy("createdAt", "asc"));
     const unsubChats = onSnapshot(chatsQuery, (snapshot) => {
       if (!snapshot.empty) {
-        const msgs = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
+        const msgs = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
         setMessages(msgs);
       } else {
-        setMessages([
-          { role: "assistant", content: "Hello! How can I help you study today?" },
-        ]);
+        setMessages([{ role: "assistant", content: "Hello! How can I help you study today?" }]);
       }
     });
 
-    // C. To-Do Tasks listener
-    const tasksQuery = query(
-      collection(db, "users", currentUser.uid, "todos"),
-      orderBy("createdAt", "desc")
-    );
+    const tasksQuery = query(collection(db, "users", currentUser.uid, "todos"), orderBy("createdAt", "desc"));
     const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
-      const items = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
+      const items = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
       setTasks(items);
     });
 
-    // D. Documents metadata listener
-    const docsQuery = query(
-      collection(db, "users", currentUser.uid, "documents"),
-      orderBy("createdAt", "desc")
-    );
+    const docsQuery = query(collection(db, "users", currentUser.uid, "documents"), orderBy("createdAt", "desc"));
     const unsubDocs = onSnapshot(docsQuery, (snapshot) => {
-      const docItems = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
+      const docItems = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
       setUploadedDocs(docItems);
     });
 
@@ -297,17 +197,9 @@ export default function Home() {
     const updateDateTime = () => {
       const now = new Date();
       setCurrentDateTime(
-        now.toLocaleDateString("en-US", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }) +
+        now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }) +
           " • " +
-          now.toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
+          now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
       );
     };
     updateDateTime();
@@ -316,9 +208,6 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  // ----------------------------------------------------
-  // PROFILE & APPEARANCE HANDLERS
-  // ----------------------------------------------------
   const handleSaveProfile = async (e) => {
     if (e) e.preventDefault();
     if (!currentUser || !db) return;
@@ -357,11 +246,7 @@ export default function Home() {
 
     if (currentUser && db) {
       try {
-        await setDoc(
-          doc(db, "users", currentUser.uid),
-          { theme: nextTheme, updatedAt: serverTimestamp() },
-          { merge: true }
-        );
+        await setDoc(doc(db, "users", currentUser.uid), { theme: nextTheme, updatedAt: serverTimestamp() }, { merge: true });
       } catch (err) {
         console.error("Failed to update theme in Firestore:", err);
       }
@@ -384,15 +269,7 @@ export default function Home() {
 
     if (currentUser && db) {
       try {
-        await setDoc(
-          doc(db, "users", currentUser.uid),
-          {
-            backgroundImage: wallpaper.src,
-            theme: wallpaper.theme,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
+        await setDoc(doc(db, "users", currentUser.uid), { backgroundImage: wallpaper.src, theme: wallpaper.theme, updatedAt: serverTimestamp() }, { merge: true });
       } catch (err) {
         console.error("Failed to update wallpaper in Firestore:", err);
       }
@@ -405,11 +282,7 @@ export default function Home() {
 
     if (currentUser && db) {
       try {
-        await setDoc(
-          doc(db, "users", currentUser.uid),
-          { backgroundImage: "", updatedAt: serverTimestamp() },
-          { merge: true }
-        );
+        await setDoc(doc(db, "users", currentUser.uid), { backgroundImage: "", updatedAt: serverTimestamp() }, { merge: true });
       } catch (err) {
         console.error("Failed to clear wallpaper in Firestore:", err);
       }
@@ -430,9 +303,6 @@ export default function Home() {
     }
   };
 
-  // ----------------------------------------------------
-  // JOURNAL HANDLERS (Firestore)
-  // ----------------------------------------------------
   const handleSaveJournal = async (e) => {
     e.preventDefault();
     if (!journalText.trim() || !currentUser || !db) return;
@@ -448,7 +318,7 @@ export default function Home() {
       });
     } catch (err) {
       console.error("Failed to save journal:", err);
-      setJournalText(textToSave); // Restore text on error
+      setJournalText(textToSave);
     }
   };
 
@@ -461,9 +331,6 @@ export default function Home() {
     }
   };
 
-  // ----------------------------------------------------
-  // CHAT HANDLERS (Firestore + Gemini AI)
-  // ----------------------------------------------------
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     if (!input.trim() || isLoading || !currentUser || !db) return;
@@ -473,14 +340,12 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      // 1. Save user message to Firestore
       await addDoc(collection(db, "users", currentUser.uid, "chats"), {
         role: "user",
         content: userText,
         createdAt: serverTimestamp(),
       });
 
-      // 2. Send full history to chat API
       const conversationToSend = [...messages, { role: "user", content: userText }];
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -489,11 +354,8 @@ export default function Home() {
       });
 
       const data = await res.json();
-      const replyContent = res.ok
-        ? data.reply
-        : data.error || "Something went wrong.";
+      const replyContent = res.ok ? data.reply : data.error || "Something went wrong.";
 
-      // 3. Save assistant reply to Firestore
       await addDoc(collection(db, "users", currentUser.uid, "chats"), {
         role: "assistant",
         content: replyContent,
@@ -521,17 +383,12 @@ export default function Home() {
       const batch = writeBatch(db);
       snap.forEach((d) => batch.delete(d.ref));
       await batch.commit();
-      setMessages([
-        { role: "assistant", content: "Hello! How can I help you study today?" },
-      ]);
+      setMessages([{ role: "assistant", content: "Hello! How can I help you study today?" }]);
     } catch (err) {
       console.error("Failed to clear chat history:", err);
     }
   };
 
-  // ----------------------------------------------------
-  // TO-DO LIST HANDLERS (Firestore)
-  // ----------------------------------------------------
   const handleAddTask = async (e) => {
     e.preventDefault();
     if (!newTaskText.trim() || !currentUser || !db) return;
@@ -571,40 +428,27 @@ export default function Home() {
     }
   };
 
-  // ----------------------------------------------------
-  // DOCUMENTS / FIREBASE STORAGE & FIRESTORE
-  // ----------------------------------------------------
   const handleUploadFiles = async (incomingFiles) => {
-    if (!currentUser || !storage || !db || !incomingFiles || incomingFiles.length === 0)
-      return;
+    if (!currentUser || !storage || !db || !incomingFiles || incomingFiles.length === 0) return;
 
     setFileErrors([]);
     const availableSlots = maxFiles - (uploadedDocs.length + uploadingQueue.length);
 
     if (incomingFiles.length > availableSlots) {
-      setFileErrors([
-        `You can only store up to ${maxFiles} documents. Please delete existing documents before uploading more.`,
-      ]);
+      setFileErrors([`You can only store up to ${maxFiles} documents. Please delete existing documents before uploading more.`]);
       return;
     }
 
     for (const file of incomingFiles) {
       if (file.size > maxSize) {
-        setFileErrors((prev) => [
-          ...prev,
-          `File "${file.name}" exceeds the maximum allowed size of ${formatBytes(maxSize)}.`,
-        ]);
+        setFileErrors((prev) => [...prev, `File "${file.name}" exceeds the maximum allowed size of ${formatBytes(maxSize)}.`]);
         continue;
       }
 
       const queueId = crypto.randomUUID();
       const newQueueItem = {
         id: queueId,
-        file: {
-          name: file.name,
-          size: file.size,
-          type: file.type || "application/octet-stream",
-        },
+        file: { name: file.name, size: file.size, type: file.type || "application/octet-stream" },
         progress: 0,
         status: "uploading",
         error: null,
@@ -621,71 +465,35 @@ export default function Home() {
         uploadTask.on(
           "state_changed",
           (snapshot) => {
-            const prog =
-              snapshot.totalBytes > 0
-                ? Math.round(
-                    (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-                  )
-                : 0;
-            setUploadingQueue((prev) =>
-              prev.map((item) =>
-                item.id === queueId ? { ...item, progress: prog } : item
-              )
-            );
+            const prog = snapshot.totalBytes > 0 ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100) : 0;
+            setUploadingQueue((prev) => prev.map((item) => (item.id === queueId ? { ...item, progress: prog } : item)));
           },
           (error) => {
             console.error("Storage upload error:", error);
-            setUploadingQueue((prev) =>
-              prev.map((item) =>
-                item.id === queueId
-                  ? { ...item, status: "error", error: "Upload failed: " + error.message }
-                  : item
-              )
-            );
+            setUploadingQueue((prev) => prev.map((item) => (item.id === queueId ? { ...item, status: "error", error: "Upload failed: " + error.message } : item)));
           },
           async () => {
             try {
               const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-              // Save metadata in user's isolated Firestore subcollection
-              await addDoc(
-                collection(db, "users", currentUser.uid, "documents"),
-                {
-                  name: file.name,
-                  size: file.size,
-                  type: file.type || "application/octet-stream",
-                  storagePath: path,
-                  downloadUrl,
-                  createdAt: serverTimestamp(),
-                }
-              );
+              await addDoc(collection(db, "users", currentUser.uid, "documents"), {
+                name: file.name,
+                size: file.size,
+                type: file.type || "application/octet-stream",
+                storagePath: path,
+                downloadUrl,
+                createdAt: serverTimestamp(),
+              });
 
-              // Remove from uploading queue
               setUploadingQueue((prev) => prev.filter((item) => item.id !== queueId));
             } catch (metaErr) {
               console.error("Failed to save doc metadata:", metaErr);
-              setUploadingQueue((prev) =>
-                prev.map((item) =>
-                  item.id === queueId
-                    ? {
-                        ...item,
-                        status: "error",
-                        error: "Failed to record document metadata in database.",
-                      }
-                    : item
-                )
-              );
+              setUploadingQueue((prev) => prev.map((item) => (item.id === queueId ? { ...item, status: "error", error: "Failed to record document metadata in database." } : item)));
             }
           }
         );
       } catch (err) {
         console.error("Upload initiation failed:", err);
-        setUploadingQueue((prev) =>
-          prev.map((item) =>
-            item.id === queueId
-              ? { ...item, status: "error", error: "Failed to start upload." }
-              : item
-          )
-        );
+        setUploadingQueue((prev) => prev.map((item) => (item.id === queueId ? { ...item, status: "error", error: "Failed to start upload." } : item)));
       }
     }
   };
@@ -693,7 +501,6 @@ export default function Home() {
   const handleDeleteDocument = async (docItem) => {
     if (!currentUser || !db) return;
     try {
-      // 1. Delete file from Firebase Storage
       if (docItem.storagePath && storage) {
         try {
           const fileRef = storageRef(storage, docItem.storagePath);
@@ -702,7 +509,6 @@ export default function Home() {
           console.warn("Storage delete notice:", sErr);
         }
       }
-      // 2. Delete metadata doc from Firestore
       await deleteDoc(doc(db, "users", currentUser.uid, "documents", docItem.id));
     } catch (err) {
       console.error("Failed to delete document:", err);
@@ -730,16 +536,7 @@ export default function Home() {
     }
   };
 
-  const {
-    isDragging,
-    errors: hookValidationErrors,
-    handleDragEnter,
-    handleDragLeave,
-    handleDragOver,
-    handleDrop,
-    openFileDialog,
-    getInputProps,
-  } = useFileUpload({
+  const { isDragging, errors: hookValidationErrors, handleDragEnter, handleDragLeave, handleDragOver, handleDrop, openFileDialog, getInputProps } = useFileUpload({
     maxFiles,
     maxSize,
     accept,
@@ -757,16 +554,13 @@ export default function Home() {
     if (type.startsWith("audio/")) return <HeadphonesIcon className="size-4" />;
     if (type.includes("pdf")) return <FileTextIcon className="size-4" />;
     if (type.includes("word") || type.includes("doc")) return <FileTextIcon className="size-4" />;
-    if (type.includes("excel") || type.includes("sheet"))
-      return <FileSpreadsheetIcon className="size-4" />;
-    if (type.includes("zip") || type.includes("rar"))
-      return <FileArchiveIcon className="size-4" />;
+    if (type.includes("excel") || type.includes("sheet")) return <FileSpreadsheetIcon className="size-4" />;
+    if (type.includes("zip") || type.includes("rar")) return <FileArchiveIcon className="size-4" />;
     return <FileTextIcon className="size-4" />;
   };
 
   const activeErrors = [...hookValidationErrors, ...fileErrors];
 
-  // Loading Screen while Auth initializes
   if (authLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-200 dark:bg-black/80 font-sans">
@@ -780,21 +574,12 @@ export default function Home() {
   }
 
   return (
-    <div
-      style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}}
-      className={`flex flex-col flex-1 min-h-screen items-center justify-start font-sans transition-all duration-300 ${
-        backgroundImage
-          ? "bg-cover bg-center bg-no-repeat bg-fixed"
-          : "bg-gray-200 dark:bg-black/50"
-      }`}
-    >
-      {/* Top Header Row */}
+    <div style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}} className={`flex flex-col flex-1 min-h-screen items-center justify-start font-sans transition-all duration-300 ${backgroundImage ? "bg-cover bg-center bg-no-repeat bg-fixed" : "bg-gray-200 dark:bg-black/50"}`}>
       <div className="w-[99vw] flex flex-row items-center justify-between px-4 my-3">
         <div className="text-black pl-[1vw] text-left dark:text-shadow-sm/50 dark:text-white leading-10 text-5xl py-2 font-['Playwrite_NZ_Basic_Guides'] rounded-xl">
           Study Buddy
         </div>
 
-        {/* User Profile Dialog Modal */}
         <Dialog>
           <Tooltip>
             <DialogTrigger render={<TooltipTrigger render={<Button className="rounded-3xl bg-white dark:bg-zinc-800 text-black dark:text-white w-12 h-12 p-2 text-2xl text-center shadow-lg hover:scale-105 transition-all">🧑</Button>}/>}/>
@@ -804,73 +589,42 @@ export default function Home() {
             <Tabs defaultValue="userset" className="flex items-center">
               <TabsList className="flex gap-x-3">
                 <TabsTrigger value="userset">
-                  <User className="mr-1.5 h-4 w-4" />
-                  User Settings
+                  <User className="mr-1.5 h-4 w-4" /> User Settings
                 </TabsTrigger>
                 <TabsTrigger value="rewards">
-                  <Trophy className="mr-1.5 h-4 w-4" />
-                  Progress
+                  <Trophy className="mr-1.5 h-4 w-4" /> Progress
                 </TabsTrigger>
                 <TabsTrigger value="personalization">
-                  <Palette className="mr-1.5 h-4 w-4" />
-                  Personalization
+                  <Palette className="mr-1.5 h-4 w-4" /> Personalization
                 </TabsTrigger>
               </TabsList>
 
-              {/* User Settings Tab */}
-              <TabsContent value="userset" className="p-8 w-full max-w-full flex flex-col items-center ">
+              <TabsContent value="userset" className="p-8 w-full max-w-full flex flex-col items-center">
                 <DialogHeader className="flex flex-col w-[60%]">
                   <DialogTitle>Edit Profile</DialogTitle>
-                  <DialogDescription>
-                    Update your personal profile and preferences. Updates are saved to your secure account.
-                  </DialogDescription>
+                  <DialogDescription>Update your personal profile and preferences. Updates are saved to your secure account.</DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSaveProfile} className="space-y-6 py-6 ">
+                <form onSubmit={handleSaveProfile} className="space-y-6 py-6">
                   <FieldGroup className="space-y-4 w-[50vw]">
                     <Field>
                       <Label htmlFor="name-input">Full Name</Label>
-                      <Input
-                        id="name-input"
-                        name="name"
-                        value={profileName}
-                        onChange={(e) => setProfileName(e.target.value)}
-                        placeholder="Your name"
-                        className="mt-1"
-                      />
+                      <Input id="name-input" name="name" value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="Your name" className="mt-1" />
                     </Field>
                     <Field>
                       <Label htmlFor="username-input">Username</Label>
-                      <Input
-                        id="username-input"
-                        name="username"
-                        value={profileUsername}
-                        onChange={(e) => setProfileUsername(e.target.value)}
-                        placeholder="@username"
-                        className="mt-1"
-                      />
+                      <Input id="username-input" name="username" value={profileUsername} onChange={(e) => setProfileUsername(e.target.value)} placeholder="@username" className="mt-1" />
                     </Field>
                     <Field>
                       <Label>Account Email</Label>
-                      <Input
-                        disabled
-                        value={currentUser?.email || "Signed In"}
-                        className="mt-1 opacity-70 cursor-not-allowed bg-muted"
-                      />
+                      <Input disabled value={currentUser?.email || "Signed In"} className="mt-1 opacity-70 cursor-not-allowed bg-muted" />
                     </Field>
                     <Field className="flex flex-row items-center justify-between pt-2 border-t border-border/50">
                       <div className="space-y-0.5">
                         <Label>Theme Preference</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Switch between light and dark mode appearance
-                        </p>
+                        <p className="text-xs text-muted-foreground">Switch between light and dark mode appearance</p>
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="!w-32 flex items-center gap-2 cursor-pointer"
-                        onClick={toggleTheme}
-                      >
+                      <Button type="button" variant="outline" className="!w-32 flex items-center gap-2 cursor-pointer" onClick={toggleTheme}>
                         {isDarkMode ? (
                           <>
                             <Sun className="h-4 w-4 text-amber-500" /> Light Mode
@@ -885,20 +639,13 @@ export default function Home() {
                   </FieldGroup>
 
                   <DialogFooter className="flex items-center justify-between pt-4 border-t border-border/50">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={handleSignOut}
-                      className="gap-2"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
+                    <Button type="button" variant="destructive" onClick={handleSignOut} className="gap-2">
+                      <LogOut className="h-4 w-4" /> Sign Out
                     </Button>
                     <div className="flex items-center gap-3">
                       {profileSaveStatus && (
                         <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          {profileSaveStatus}
+                          <CheckCircle2 className="h-3.5 w-3.5" /> {profileSaveStatus}
                         </span>
                       )}
                       <DialogClose render={<Button variant="outline">Cancel</Button>} />
@@ -910,16 +657,13 @@ export default function Home() {
                 </form>
               </TabsContent>
 
-              {/* Rewards Tab */}
               <TabsContent value="rewards" className="p-8 w-full max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Progress</DialogTitle>
-                  <DialogDescription>
-                    Track your streak, study habits, and badges earned.
-                  </DialogDescription>
+                  <DialogDescription>Track your streak, study habits, and badges earned.</DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-2 gap-4 py-6 *:hover:shadow-black *:dark:hover:shadow-white *:hover:shadow-lg/10 *:duration-200">
-                  <div className="p-4 rounded-xl  bg-muted/40 flex flex-col gap-1">
+                  <div className="p-4 rounded-xl bg-muted/40 flex flex-col gap-1">
                     <span className="text-xs font-semibold text-muted-foreground uppercase">Tasks Completed</span>
                     <span className="text-2xl font-bold">{tasks.filter((t) => t.completed).length} Tasks</span>
                   </div>
@@ -931,21 +675,18 @@ export default function Home() {
                     <span className="text-xs font-semibold text-muted-foreground uppercase">Documents Stored</span>
                     <span className="text-2xl font-bold">{uploadedDocs.length} Files</span>
                   </div>
-                  <div className="p-4 rounded-xl  bg-muted/40 flex flex-col gap-1">
+                  <div className="p-4 rounded-xl bg-muted/40 flex flex-col gap-1">
                     <span className="text-xs font-semibold text-muted-foreground uppercase">ChatBot Usage</span>
                     <span className="text-2xl font-bold">{messages.filter(m => m.role === 'user').length} Prompts</span>
                   </div>
                 </div>
               </TabsContent>
 
-              {/* Personalization Tab */}
               <TabsContent value="personalization" className="flex flex-col items-start pb-10 p-8">
                 <div className="flex items-center justify-between w-[70vw] my-5">
                   <div className="space-y-0.5">
                     <Label className="text-base font-semibold">Background Theme</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Pick your preferred background theme. Changes update instantly for your account.
-                    </p>
+                    <p className="text-xs text-muted-foreground">Pick your preferred background theme. Changes update instantly for your account.</p>
                   </div>
                   {backgroundImage && (
                     <Button variant="outline" size="sm" onClick={clearWallpaper}>
@@ -958,19 +699,8 @@ export default function Home() {
                   <CarouselContent className="*:select-none p-10">
                     {WALLPAPERS.map((wp) => (
                       <CarouselItem key={wp.id} className="w-[10vw]! basis-1/3">
-                        <div
-                          onClick={() => handleSelectWallpaper(wp)}
-                          className={`cursor-pointer overflow-hidden rounded-xl border-2 transition-all p-1 ${
-                            backgroundImage === wp.src
-                              ? "border-primary ring-2 ring-primary shadow-lg scale-102"
-                              : "border-transparent hover:border-muted-foreground/50"
-                          }`}
-                        >
-                          <img
-                            src={wp.src}
-                            alt={wp.title}
-                            className="w-full h-40 object-cover rounded-lg"
-                          />
+                        <div onClick={() => handleSelectWallpaper(wp)} className={`cursor-pointer overflow-hidden rounded-xl border-2 transition-all p-1 ${backgroundImage === wp.src ? "border-primary ring-2 ring-primary shadow-lg scale-102" : "border-transparent hover:border-muted-foreground/50"}`}>
+                          <img src={wp.src} alt={wp.title} className="w-full h-40 object-cover rounded-lg" />
                           <p className="text-xs font-medium text-center mt-2">{wp.title}</p>
                         </div>
                       </CarouselItem>
@@ -985,10 +715,7 @@ export default function Home() {
         </Dialog>
       </div>
 
-      {/* Main Apps Layout */}
       <div className="mt-2 w-[99vw] h-[84vh] items-start *:dark:text-black flex flex-row gap-x-5 *:duration-500">
-        
-        {/* Left Column: Focus Pomodoro & Journal */}
         <Card className="w-[25vw] shadow-2xl bg-white/90 dark:bg-zinc-900/90 outline backdrop-blur-md h-full p-5 rounded-2xl">
           <Tabs defaultValue="focus">
             <TabsList>
@@ -1008,60 +735,35 @@ export default function Home() {
 
             <TabsContent value="journal" className="relative pt-2">
               <div className="flex flex-col bg-gray-100 dark:bg-zinc-800/90 rounded-xl p-4 shadow h-[72.5vh]">
-                {/* Top Row: Title & View Past Entries Dialog Button */}
                 <div className="flex items-center justify-between pb-2">
                   <span className="text-sm font-semibold text-foreground">Daily Journal</span>
 
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs dark:text-white"
-                      >
+                      <Button variant="outline" size="sm" className="h-7 text-xs dark:text-white">
                         Past Entries ({journalEntries.length})
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="w-[80vw] max-w-lg max-h-[80vh] h-full overflow-hidden flex flex-col">
                       <DialogHeader>
                         <DialogTitle>Journal History</DialogTitle>
-                        <DialogDescription>
-                          {journalEntries.length === 0
-                            ? "You are yet to write a Journal Entry."
-                            : journalEntries.length === 1
-                            ? "You've journalled 1 time"
-                            : `You've journalled ${journalEntries.length} times.`}
-                        </DialogDescription>
+                        <DialogDescription>{journalEntries.length === 0 ? "You are yet to write a Journal Entry." : journalEntries.length === 1 ? "You've journalled 1 time" : `You've journalled ${journalEntries.length} times.`}</DialogDescription>
                       </DialogHeader>
 
-                      <ScrollArea className="flex-1 max-h-[57.5vh] pr-4 my-2 " >
+                      <ScrollArea className="flex-1 max-h-[57.5vh] pr-4 my-2">
                         {journalEntries.length === 0 ? (
-                          <p className="text-sm text-muted-foreground text-center py-8">
-                            No journal entries yet. Start logging your thoughts!
-                          </p>
+                          <p className="text-sm text-muted-foreground text-center py-8">No journal entries yet. Start logging your thoughts!</p>
                         ) : (
-                          <div className="space-y-3 ">
+                          <div className="space-y-3">
                             {journalEntries.map((entry) => (
-                              <div
-                                key={entry.id}
-                                className="p-3 rounded-lg dark:hover:shadow-white hover:shadow-lg/10 hover:scale-101 duration-200 bg-background/50 flex flex-col gap-1 relative group"
-                              >
+                              <div key={entry.id} className="p-3 rounded-lg dark:hover:shadow-white hover:shadow-lg/10 hover:scale-101 duration-200 bg-background/50 flex flex-col gap-1 relative group">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-xs font-semibold text-muted-foreground">
-                                    {entry.timestamp}
-                                  </span>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                    onClick={() => handleDeleteJournal(entry.id)}
-                                  >
+                                  <span className="text-xs font-semibold text-muted-foreground">{entry.timestamp}</span>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteJournal(entry.id)}>
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
-                                <p className="text-sm whitespace-pre-wrap text-foreground">
-                                  {entry.text}
-                                </p>
+                                <p className="text-sm whitespace-pre-wrap text-foreground">{entry.text}</p>
                               </div>
                             ))}
                           </div>
@@ -1070,81 +772,51 @@ export default function Home() {
 
                       <DialogFooter>
                         <DialogClose asChild>
-                          <Button variant="outline" size="sm">
-                            Close
-                          </Button>
+                          <Button variant="outline" size="sm">Close</Button>
                         </DialogClose>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
                 </div>
 
-                {/* Date and Time Display */}
-                <div className="text-xs font-medium text-muted-foreground pb-2">
-                  {currentDateTime || "Loading date & time..."}
-                </div>
+                <div className="text-xs font-medium text-muted-foreground pb-2">{currentDateTime || "Loading date & time..."}</div>
 
-                {/* Textarea & Log Button Form */}
                 <form onSubmit={handleSaveJournal} className="flex flex-col flex-1 gap-2">
-                  <textarea
-                    value={journalText}
-                    onChange={(e) => setJournalText(e.target.value)}
-                    placeholder="What's on your mind today?"
-                    className="flex-1 w-full bg-background/60 border border-border/60 rounded-lg p-3 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  <Button type="submit" size="sm" className="w-full">
-                    Log
-                  </Button>
+                  <textarea value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder="What's on your mind today?" className="flex-1 w-full bg-background/60 border border-border/60 rounded-lg p-3 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary" />
+                  <Button type="submit" size="sm" className="w-full">Log</Button>
                 </form>
               </div>
             </TabsContent>
           </Tabs>
         </Card>
 
-        {/* Center Column: AI Chat */}
+        {/* Center Column: AI Chat - Updated with ReactMarkdown */}
         <div className="dark:bg-zinc-900/90 w-[60%] rounded-2xl shadow-2xl flex flex-col items-center justify-between relative bg-white/90 backdrop-blur-md h-full">
-          {/* Chat Header Actions */}
           <div className="w-[95%] pt-3 flex items-center justify-between border-b border-border/40 pb-2">
-            <span className="text-xs font-semibold  text-muted-foreground tracking-wide uppercase">
-              Study Buddy AI Assistant
-            </span>
+            <span className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">Study Buddy AI Assistant</span>
             {messages.length > 1 && (
               <Dialog open={isClearChatDialogOpen} onOpenChange={setIsClearChatDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    className="h-6 text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                    Clear Chat
+                  <Button variant="ghost" size="xs" className="h-6 text-xs text-muted-foreground hover:text-destructive flex items-center gap-1">
+                    <Trash2 className="h-3 w-3" /> Clear Chat
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Clear Chat History?</DialogTitle>
-                    <DialogDescription>
-                      This will permanently remove your AI conversation history from your account.
-                    </DialogDescription>
+                    <DialogDescription>This will permanently remove your AI conversation history from your account.</DialogDescription>
                   </DialogHeader>
                   <DialogFooter className="flex justify-end gap-2 pt-2">
                     <DialogClose asChild>
                       <Button variant="outline" size="sm">Cancel</Button>
                     </DialogClose>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={handleClearChatHistory}
-                    >
-                      Clear History
-                    </Button>
+                    <Button variant="destructive" size="sm" onClick={handleClearChatHistory}>Clear History</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
             )}
           </div>
 
-          {/* Chat Messages Area */}
           <ScrollArea className="w-[90%] flex flex-col h-[75%] rounded px-5">
             <div className="flex flex-col space-y-4 py-4">
               {messages.map((msg, index) => (
@@ -1152,13 +824,17 @@ export default function Home() {
                   key={msg.id || index}
                   variant={msg.role === "user" ? "muted" : "default"}
                   align={msg.role === "user" ? "end" : "start"}
-                  className={`text-xl ${
-                    msg.role === "user"
-                      ? "ml-30 text-right"
-                      : "mr-30 text-left text-gray-900 dark:text-white"
-                  }`}
+                  className={`text-xl ${msg.role === "user" ? "ml-30 text-right" : "mr-30 text-left text-gray-900 dark:text-white"}`}
                 >
-                  <BubbleContent>{msg.content}</BubbleContent>
+                  <BubbleContent>
+                    {msg.role === "user" ? (
+                      msg.content
+                    ) : (
+                      <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                    )}
+                  </BubbleContent>
                 </Bubble>
               ))}
               {isLoading && (
@@ -1169,7 +845,6 @@ export default function Home() {
             </div>
           </ScrollArea>
 
-          {/* Chat Input Area */}
           <form onSubmit={handleSendMessage} className="w-[95%] flex items-center gap-2 mb-5">
             <textarea
               value={input}
@@ -1183,17 +858,12 @@ export default function Home() {
               className="bg-black/50 w-full backdrop-blur-xs shadow-xl py-4 rounded-3xl focus:bg-black duration-200 px-6 text-white resize-none outline-none min-h-[50px] max-h-[120px]"
               placeholder="What would you like to know?"
             />
-            <Button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              className="rounded-full h-12 w-12 shrink-0 cursor-pointer"
-            >
+            <Button type="submit" disabled={isLoading || !input.trim()} className="rounded-full h-12 w-12 shrink-0 cursor-pointer">
               <SendHorizontal />
             </Button>
           </form>
         </div>
 
-        {/* Right Column: To-Do List & Documents / Music Player */}
         <div className="rounded-2xl w-[25vw] flex flex-col">
           <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md h-[55vh] w-[25vw] rounded-2xl shadow-2xl overflow-hidden">
             <Tabs defaultValue="todo" className="rounded-2xl p-5 h-full flex flex-col">
@@ -1206,66 +876,31 @@ export default function Home() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* To-Do List Area */}
               <TabsContent value="todo" className="flex-1 flex flex-col min-h-0 pt-3 space-y-3">
                 <form onSubmit={handleAddTask} className="flex gap-2">
-                  <Input
-                    placeholder="What are you working on?"
-                    value={newTaskText}
-                    onChange={(e) => setNewTaskText(e.target.value)}
-                    className="h-9 text-xs text-foreground dark:bg-zinc-800/80 dark:border-zinc-700 border-black/50"
-                  />
+                  <Input placeholder="What are you working on?" value={newTaskText} onChange={(e) => setNewTaskText(e.target.value)} className="h-9 text-xs text-foreground dark:bg-zinc-800/80 dark:border-zinc-700 border-black/50" />
                   <Button type="submit" size="sm" className="h-9 px-3">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </form>
 
                 <div className="flex items-center justify-between text-sm text-foreground px-1">
-                  <span>
-                    {tasks.filter((t) => t.completed).length}/{tasks.length} completed
-                  </span>
+                  <span>{tasks.filter((t) => t.completed).length}/{tasks.length} completed</span>
                 </div>
 
                 <ScrollArea className="flex-1 pr-2">
                   {tasks.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-sm border text-foreground border-dashed rounded-lg py-8">
-                      All Done!
-                    </div>
+                    <div className="flex items-center justify-center h-full text-sm border text-foreground border-dashed rounded-lg py-8">All Done!</div>
                   ) : (
                     <div className="space-y-1.5 pb-2 *:shadow-xs">
                       {tasks.map((task) => (
-                        <div
-                          key={task.id}
-                          className="group flex items-center justify-between p-2 rounded-lg border border-border/50 bg-background/50 hover:bg-accent/40 transition-colors"
-                        >
-                          <div
-                            className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer"
-                            onClick={() => handleToggleTask(task.id, task.completed)}
-                          >
-                            <Checkbox
-                              checked={task.completed}
-                              onCheckedChange={() =>
-                                handleToggleTask(task.id, task.completed)
-                              }
-                              className="border-foreground/50"
-                            />
-                            <span
-                              className={`text-sm truncate transition-all ${
-                                task.completed
-                                  ? "line-through text-muted-foreground"
-                                  : "text-foreground font-medium"
-                              }`}
-                            >
-                              {task.title}
-                            </span>
+                        <div key={task.id} className="group flex items-center justify-between p-2 rounded-lg border border-border/50 bg-background/50 hover:bg-accent/40 transition-colors">
+                          <div className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer" onClick={() => handleToggleTask(task.id, task.completed)}>
+                            <Checkbox checked={task.completed} onCheckedChange={() => handleToggleTask(task.id, task.completed)} className="border-foreground/50" />
+                            <span className={`text-sm truncate transition-all ${task.completed ? "line-through text-muted-foreground" : "text-foreground font-medium"}`}>{task.title}</span>
                           </div>
 
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteTask(task.id)}
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteTask(task.id)} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -1275,42 +910,15 @@ export default function Home() {
                 </ScrollArea>
               </TabsContent>
 
-              {/* Documents Area (Firebase Storage + Firestore) */}
-              <TabsContent
-                value="docs"
-                className="flex-1 flex flex-col min-h-0 pt-2 overflow-hidden"
-              >
+              <TabsContent value="docs" className="flex-1 flex flex-col min-h-0 pt-2 overflow-hidden">
                 <div className="text-black dark:text-white flex flex-col h-full overflow-hidden">
                   <div className="w-full max-w-2xl flex flex-col h-full overflow-hidden">
-                    {/* Drag & Drop Upload Zone */}
-                    <div
-                      className={cn(
-                        "rounded-lg relative border flex flex-row justify-center border-dashed p-4 text-center shrink-0 transition-colors cursor-pointer",
-                        isDragging
-                          ? "border-primary bg-primary/5"
-                          : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                      )}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                      onClick={openFileDialog}
-                    >
+                    <div className={cn("rounded-lg relative border flex flex-row justify-center border-dashed p-4 text-center shrink-0 transition-colors cursor-pointer", isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/50")} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={handleDrop} onClick={openFileDialog}>
                       <input {...getInputProps()} className="sr-only" />
 
                       <div className="flex flex-row items-center gap-4">
-                        <div
-                          className={cn(
-                            "flex items-center justify-center rounded-full p-1",
-                            isDragging ? "bg-primary/10" : "bg-none"
-                          )}
-                        >
-                          <UploadIcon
-                            className={cn(
-                              "h-5 w-5",
-                              isDragging ? "text-primary" : "text-muted-foreground"
-                            )}
-                          />
+                        <div className={cn("flex items-center justify-center rounded-full p-1", isDragging ? "bg-primary/10" : "bg-none")}>
+                          <UploadIcon className={cn("h-5 w-5", isDragging ? "text-primary" : "text-muted-foreground")} />
                         </div>
 
                         <div className="space-y-0.5 text-left">
@@ -1318,68 +926,37 @@ export default function Home() {
                           <p className="text-xs text-muted-foreground">Up to 10MB per file</p>
                         </div>
 
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openFileDialog();
-                          }}
-                          className="ml-auto"
-                        >
-                          <UploadIcon className="h-3.5 w-3.5 mr-1" />
-                          Select
+                        <Button type="button" size="sm" onClick={(e) => { e.stopPropagation(); openFileDialog(); }} className="ml-auto">
+                          <UploadIcon className="h-3.5 w-3.5 mr-1" /> Select
                         </Button>
                       </div>
                     </div>
 
-                    {/* Upload Stats & Clear All Button */}
                     {(uploadedDocs.length > 0 || uploadingQueue.length > 0) && (
                       <div className="mt-4 flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <h4 className="text-xs font-semibold uppercase text-muted-foreground">Files</h4>
                           <div className="flex items-center gap-1">
-                            {uploadedDocs.length > 0 && (
-                              <Badge size="sm" variant="success-light">
-                                Saved: {uploadedDocs.length}
-                              </Badge>
-                            )}
-                            {uploadingQueue.length > 0 && (
-                              <Badge size="sm" variant="secondary">
-                                Uploading: {uploadingQueue.length}
-                              </Badge>
-                            )}
+                            {uploadedDocs.length > 0 && <Badge size="sm" variant="success-light">Saved: {uploadedDocs.length}</Badge>}
+                            {uploadingQueue.length > 0 && <Badge size="sm" variant="secondary">Uploading: {uploadingQueue.length}</Badge>}
                           </div>
                         </div>
 
                         {uploadedDocs.length > 0 && (
-                          <Dialog
-                            open={isClearAllDocsDialogOpen}
-                            onOpenChange={setIsClearAllDocsDialogOpen}
-                          >
+                          <Dialog open={isClearAllDocsDialogOpen} onOpenChange={setIsClearAllDocsDialogOpen}>
                             <DialogTrigger asChild>
-                              <Button variant="outline" size="xs">
-                                Clear all
-                              </Button>
+                              <Button variant="outline" size="xs">Clear all</Button>
                             </DialogTrigger>
                             <DialogContent>
                               <DialogHeader>
                                 <DialogTitle>Delete All Documents?</DialogTitle>
-                                <DialogDescription>
-                                  This will permanently remove all your files from Firebase Storage.
-                                </DialogDescription>
+                                <DialogDescription>This will permanently remove all your files from Firebase Storage.</DialogDescription>
                               </DialogHeader>
                               <DialogFooter className="flex justify-end gap-2 pt-2">
                                 <DialogClose asChild>
                                   <Button variant="outline" size="sm">Cancel</Button>
                                 </DialogClose>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={handleClearAllDocuments}
-                                >
-                                  Delete All
-                                </Button>
+                                <Button variant="destructive" size="sm" onClick={handleClearAllDocuments}>Delete All</Button>
                               </DialogFooter>
                             </DialogContent>
                           </Dialog>
@@ -1387,26 +964,17 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Combined Documents List: Live Uploading + Firestore Saved */}
                     <ScrollArea className="flex-1 mt-2 pr-3 overflow-y-auto">
                       {uploadedDocs.length === 0 && uploadingQueue.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-40 border border-dashed rounded-lg text-center p-4 my-2">
                           <Files className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                          <p className="text-xs font-medium text-muted-foreground">
-                            No documents uploaded yet.
-                          </p>
-                          <p className="text-[11px] text-muted-foreground/70">
-                            Files you upload are securely saved to your account.
-                          </p>
+                          <p className="text-xs font-medium text-muted-foreground">No documents uploaded yet.</p>
+                          <p className="text-[11px] text-muted-foreground/70">Files you upload are securely saved to your account.</p>
                         </div>
                       ) : (
                         <div className="space-y-2 pb-2">
-                          {/* 1. Uploading Files in Progress */}
                           {uploadingQueue.map((item) => (
-                            <div
-                              key={item.id}
-                              className="border-border bg-card rounded-lg border p-2.5 shadow-xs"
-                            >
+                            <div key={item.id} className="border-border bg-card rounded-lg border p-2.5 shadow-xs">
                               <div className="flex items-start gap-2.5">
                                 <div className="shrink-0 text-muted-foreground rounded-lg flex h-10 w-10 items-center justify-center border border-border">
                                   {getFileIcon(item.file)}
@@ -1415,9 +983,7 @@ export default function Home() {
                                   <div className="flex items-center justify-between">
                                     <p className="inline-flex flex-col justify-center truncate font-medium">
                                       <span className="text-xs truncate">{item.file.name}</span>
-                                      <span className="text-muted-foreground text-[10px]">
-                                        {formatBytes(item.file.size)} • Uploading...
-                                      </span>
+                                      <span className="text-muted-foreground text-[10px]">{formatBytes(item.file.size)} • Uploading...</span>
                                     </p>
                                   </div>
                                   <div className="mt-2">
@@ -1434,21 +1000,12 @@ export default function Home() {
                             </div>
                           ))}
 
-                          {/* 2. Uploaded & Stored Documents */}
                           {uploadedDocs.map((docItem) => (
-                            <div
-                              key={docItem.id}
-                              className="border-border bg-card rounded-lg border p-2.5 shadow-xs hover:border-primary/40 transition-colors group"
-                            >
+                            <div key={docItem.id} className="border-border bg-card rounded-lg border p-2.5 shadow-xs hover:border-primary/40 transition-colors group">
                               <div className="flex items-start gap-2.5">
                                 <div className="shrink-0">
-                                  {docItem.downloadUrl &&
-                                  (docItem.type || "").startsWith("image/") ? (
-                                    <img
-                                      src={docItem.downloadUrl}
-                                      alt={docItem.name}
-                                      className="rounded-lg h-10 w-10 border object-cover"
-                                    />
+                                  {docItem.downloadUrl && (docItem.type || "").startsWith("image/") ? (
+                                    <img src={docItem.downloadUrl} alt={docItem.name} className="rounded-lg h-10 w-10 border object-cover" />
                                   ) : (
                                     <div className="border-border text-muted-foreground rounded-lg flex h-10 w-10 items-center justify-center border">
                                       {getFileIcon(docItem)}
@@ -1459,39 +1016,19 @@ export default function Home() {
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center justify-between">
                                     <div className="min-w-0 pr-2">
-                                      <a
-                                        href={docItem.downloadUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs font-medium text-foreground hover:text-primary truncate block hover:underline"
-                                        title={docItem.name}
-                                      >
+                                      <a href={docItem.downloadUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-foreground hover:text-primary truncate block hover:underline" title={docItem.name}>
                                         {docItem.name}
                                       </a>
-                                      <span className="text-muted-foreground text-[10px]">
-                                        {formatBytes(docItem.size)}
-                                      </span>
+                                      <span className="text-muted-foreground text-[10px]">{formatBytes(docItem.size)}</span>
                                     </div>
 
                                     <div className="flex items-center gap-1">
                                       {docItem.downloadUrl && (
-                                        <a
-                                          href={docItem.downloadUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-muted-foreground hover:text-primary p-1 rounded transition-colors"
-                                          title="Open / Download"
-                                        >
-                                          <ExternalLink className="h-3.5 w-3.5" />
+                                        <a href={docItem.downloadUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary scale-70 rounded transition-colors" title="Download">
+                                          <Download e="h-3.5 w-3.5" />
                                         </a>
                                       )}
-                                      <Button
-                                        onClick={() => handleDeleteDocument(docItem)}
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                        title="Delete file"
-                                      >
+                                      <Button onClick={() => handleDeleteDocument(docItem)} variant="ghost" size="icon" e="h-6 w-6 text-muted-foreground hover:text-destructive" title="Delete file">
                                         <Trash2 className="h-3.5 w-3.5" />
                                       </Button>
                                     </div>
@@ -1504,16 +1041,13 @@ export default function Home() {
                       )}
                     </ScrollArea>
 
-                    {/* File Error Alerts */}
                     {activeErrors.length > 0 && (
                       <Alert variant="destructive" className="mt-3">
                         <CircleAlertIcon />
                         <AlertTitle>Upload Issue</AlertTitle>
                         <AlertDescription>
                           {activeErrors.map((error, index) => (
-                            <p key={index} className="text-xs last:mb-0">
-                              {error}
-                            </p>
+                            <p key={index} className="text-xs last:mb-0">{error}</p>
                           ))}
                         </AlertDescription>
                       </Alert>
@@ -1524,7 +1058,6 @@ export default function Home() {
             </Tabs>
           </div>
 
-          {/* Bottom Music Player */}
           <div className="h-[26.5vh] shadow-2xl backdrop-blur-md rounded-2xl mt-5">
             <AudioPlayer />
           </div>

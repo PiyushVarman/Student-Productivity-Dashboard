@@ -12,7 +12,7 @@ export async function POST(req) {
     }
 
     // Updated to the current model recommended by the API error message
-    const model = genAI.getGenerativeModel({ model: "gemini-3.8-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
 
     let formattedHistory = messages.slice(0, -1).map((msg) => ({
       role: msg.role === "user" ? "user" : "model",

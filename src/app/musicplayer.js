@@ -55,7 +55,7 @@ const tracks = [
 
 export const AudioPlayerDemo = () => {
   return (
-    <Card className="w-full h-full flex flex-col justify-center p-4 bg-background/80 dark:bg-background/50">
+    <Card className="w-full h-full flex flex-col justify-center p-4 bg-white/90 dark:bg-zinc-900/90">
       {/* Mini Player Section */}
       <Player />
 
