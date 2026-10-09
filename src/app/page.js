@@ -33,7 +33,7 @@ import { doc, getDoc, setDoc, collection, addDoc, deleteDoc, updateDoc, query, o
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
 const WALLPAPERS = [
-  { id: "yourname", src: "/wallpapers/yourname.jpg", title: "Your Name", theme: "dark" },
+  { id: "yourname", src: "/wallpapers/yourname.jpg", title: "your name.", theme: "dark" },
   { id: "icons", src: "/wallpapers/icons.png", title: "Icons", theme: "dark" },
   { id: "pastel", src: "/wallpapers/pastel.png", title: "Pastel", theme: "light" },
   { id: "BND", src: "/wallpapers/brandnewday.webp", title: "Brand New Day", theme: "dark" },
