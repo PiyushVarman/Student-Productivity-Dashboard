@@ -37,6 +37,7 @@ const WALLPAPERS = [
   { id: "icons", src: "/wallpapers/icons.png", title: "Icons", theme: "dark" },
   { id: "pastel", src: "/wallpapers/pastel.png", title: "Pastel", theme: "light" },
   { id: "BND", src: "/wallpapers/brandnewday.webp", title: "Brand New Day", theme: "dark" },
+  { id: "filmburn", src: "/wallpapers/filmburn.png", title: "Film Burn", theme: "dark" },
 ];
 
 export default function Home() {
@@ -769,7 +770,7 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md border border-border/50 shadow-sm text-xs font-semibold text-foreground">
+          <div className="hidden select-none sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md border border-border/50 shadow-sm text-xs font-semibold text-foreground">
             <Trophy className="h-3.5 w-3.5 text-amber-500" />
             <span>Lvl {userLevel}</span>
             <span className="text-muted-foreground font-normal">• {userXp}/{getRequiredXpForLevel(userLevel)} XP</span>
@@ -794,7 +795,7 @@ export default function Home() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="userset" className="p-8 w-full max-w-full flex flex-col items-center">
+              <TabsContent value="userset" className="p-8 w-full select-none max-w-full flex flex-col items-center">
                 <DialogHeader className="flex flex-col w-[60%]">
                   <DialogTitle>Edit Profile</DialogTitle>
                   <DialogDescription>Update your personal profile and preferences. Updates are saved to your secure account.</DialogDescription>
@@ -852,7 +853,7 @@ export default function Home() {
                 </form>
               </TabsContent>
 
-              <TabsContent value="rewards" className="p-8 w-full max-w-2xl">
+              <TabsContent value="rewards" className="p-8 w-full max-w-2xl select-none">
                 <DialogHeader>
                   <DialogTitle>Progress</DialogTitle>
                   <DialogDescription>Track your streak, study habits, and level progression.</DialogDescription>
@@ -911,7 +912,7 @@ export default function Home() {
               </TabsContent>
 
               <TabsContent value="personalization" className="flex flex-col items-start pb-10 p-8">
-                <div className="flex items-center justify-between w-[70vw] my-5">
+                <div className="flex items-center justify-between w-[70vw] my-5 select-none">
                   <div className="space-y-0.5">
                     <Label className="text-base font-semibold">Background Theme</Label>
                     <p className="text-xs text-muted-foreground">Pick your preferred background theme. Changes update instantly for your account.</p>
@@ -945,7 +946,7 @@ export default function Home() {
       </div>
 
       <div className="mt-2 w-[99vw] h-[84vh] items-start *:dark:text-black flex flex-row gap-x-5 *:duration-500">
-        <Card className="w-[25vw] shadow-2xl bg-white/90 dark:bg-zinc-900/90 outline backdrop-blur-md h-full p-5 rounded-2xl">
+        <Card className="w-[25vw] shadow-2xl bg-white/90 dark:bg-zinc-900/90  backdrop-blur-md h-full p-5 rounded-2xl">
           <Tabs defaultValue="focus">
             <TabsList>
               <TabsTrigger value="focus">

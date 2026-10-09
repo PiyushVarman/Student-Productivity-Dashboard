@@ -10,6 +10,7 @@ const nextConfig = {
     root: __dirname,
   },
   reactCompiler: true,
+  devIndicators: false,
 };
 
 export default nextConfig;
