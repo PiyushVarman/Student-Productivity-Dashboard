@@ -47,9 +47,9 @@ const tracks = [
   },
   {
     id: "track-3",
-    name: "Special",
+    name: "Please Listen to this Song!",
     src: "/music/SpecialSong.mp3",
-    data: { title: "SpecialSong", artist: "RA" },
+    data: { title: "You just got...", artist: "RA" },
   }
 ]
 
