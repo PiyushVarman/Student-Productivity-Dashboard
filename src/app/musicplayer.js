@@ -41,16 +41,40 @@ const tracks = [
   },
   {
     id: "track-2",
+    name: "Close My Eyes",
+    src: "/music/CloseMyEyes.mp3",
+    data: { title: "Close My Eyes", artist: "WYS" },
+  },
+  {
+    id: "track-3",
+    name: "Solitude",
+    src: "/music/Solitude.mp3",
+    data: { title: "Solitude", artist: "DonVayei" },
+  },
+  {
+    id: "track-4",
+    name: "the songbird and the bookworm",
+    src: "/music/songbirdandbookworm.mp3",
+    data: { title: "the songbird and the bookworm", artist: "Blue Wednesday" },
+  },
+  {
+    id: "track-5",
+    name: "Growth Story",
+    src: "/music/GrowthStory.mp3",
+    data: { title: "Growth Story", artist: "Kupla" },
+  },
+  {
+    id: "track-6",
     name: "40Hz Binaural Beats",
     src: "/music/40HzBinauralBeats.mp3",
     data: { title: "40Hz Binaural Beats", artist: "Be Inspired | Studio" },
   },
   {
-    id: "track-3",
-    name: "Please Listen to this Song!",
-    src: "/music/SpecialSong.mp3",
-    data: { title: "You just got...", artist: "RA" },
-  }
+    id: "track-7",
+    name: "Keyboard ASMR",
+    src: "/music/KeyboardASMR.mp3",
+    data: { title: "Keyboard ASMR", artist: "Sailor Kaye" },
+  },
 ]
 
 export const AudioPlayerDemo = () => {
@@ -75,7 +99,7 @@ export const AudioPlayerDemo = () => {
             <DialogHeader>
               <DialogTitle>Track Library</DialogTitle>
               <DialogDescription>
-                Choose a track to play. Audio will continue in the background.
+                Lofi, ASMR and beats to help you focus.
               </DialogDescription>
             </DialogHeader>
 
