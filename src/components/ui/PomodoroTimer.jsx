@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-export default function PomodoroTimer({ onFocusComplete }) {
+export default function PomodoroTimer({ onFocusComplete, onFocusMinuteComplete }) {
   // Durations stored in minutes
   const [focusMinutes, setFocusMinutes] = useState(25);
   const [breakMinutes, setBreakMinutes] = useState(5);
@@ -37,6 +37,13 @@ export default function PomodoroTimer({ onFocusComplete }) {
     onFocusCompleteRef.current = onFocusComplete;
   }, [onFocusComplete]);
 
+  const onFocusMinuteCompleteRef = useRef(onFocusMinuteComplete);
+  useEffect(() => {
+    onFocusMinuteCompleteRef.current = onFocusMinuteComplete;
+  }, [onFocusMinuteComplete]);
+
+  const activeFocusSecondsRef = useRef(0);
+
   const totalDuration = (mode === "focus" ? focusMinutes : breakMinutes) * 60;
 
   // Tick interval handler
@@ -45,8 +52,16 @@ export default function PomodoroTimer({ onFocusComplete }) {
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft((prev) => prev - 1);
+        if (mode === "focus") {
+          activeFocusSecondsRef.current += 1;
+          if (activeFocusSecondsRef.current >= 60) {
+            activeFocusSecondsRef.current = 0;
+            onFocusMinuteCompleteRef.current?.(1);
+          }
+        }
       }, 1000);
     } else if (timeLeft === 0) {
+      activeFocusSecondsRef.current = 0;
       // Award XP if focus timer hits 00:00 (no reward from break timer)
       if (mode === "focus" && onFocusCompleteRef.current) {
         onFocusCompleteRef.current(focusMinutes);
@@ -65,6 +80,7 @@ export default function PomodoroTimer({ onFocusComplete }) {
   // Mode tab change handler
   const handleModeChange = (newMode) => {
     setIsActive(false);
+    activeFocusSecondsRef.current = 0;
     setMode(newMode);
     setTimeLeft((newMode === "focus" ? focusMinutes : breakMinutes) * 60);
   };
@@ -77,6 +93,7 @@ export default function PomodoroTimer({ onFocusComplete }) {
   // Reset timer to beginning of current mode
   const resetTimer = () => {
     setIsActive(false);
+    activeFocusSecondsRef.current = 0;
     setTimeLeft((mode === "focus" ? focusMinutes : breakMinutes) * 60);
   };
 
