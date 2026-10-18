@@ -400,8 +400,8 @@ export default function Home() {
       const now = new Date();
       setCurrentDateTime(
         now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }) +
-          " • " +
-          now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+        " • " +
+        now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
       );
     };
     updateDateTime();
@@ -444,11 +444,6 @@ export default function Home() {
       document.documentElement.classList.add("dark");
     } else if (isSunset) {
       document.documentElement.classList.add("sunset");
-      triggerAchievementToast({
-        title: "Sunset Theme Discovered!",
-        description: "You unlocked the hidden sunset easter egg theme!",
-        metric: "Easter Egg",
-      });
     }
 
     localStorage.setItem("theme", themeName);
@@ -923,13 +918,12 @@ export default function Home() {
   return (
     <div
       style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}}
-      className={`flex flex-col flex-1 min-h-screen items-center justify-start font-sans transition-all duration-300 ${
-        backgroundImage
+      className={`flex flex-col flex-1 min-h-screen items-center justify-start font-sans transition-all duration-300 ${backgroundImage
           ? "bg-cover bg-center bg-no-repeat bg-fixed"
           : currentTheme === "sunset"
-          ? "bg-gradient-to-br from-amber-400 via-orange-500 to-yellow-400"
-          : "bg-gray-200 dark:bg-black/50"
-      }`}
+            ? "bg-gradient-to-br from-amber-400 via-orange-500 to-yellow-400"
+            : "bg-gray-200 dark:bg-black/50"
+        }`}
     >
       {/* Achievement Achieved Notification Pop-up */}
       {achievementNotification && (
@@ -944,7 +938,7 @@ export default function Home() {
               <span className="text-xs text-white/80 font-normal">{achievementNotification.description}</span>
             </div>
             <span className="text-xs font-bold px-2.5 py-1 bg-white/25 rounded-full text-white shrink-0 ml-1">
-              +10 XP
+              +20 XP
             </span>
             <button
               onClick={() => setAchievementNotification(null)}
@@ -999,316 +993,315 @@ export default function Home() {
 
         <div className="flex items-center gap-3">
           <Tooltip>
-              <TooltipTrigger>
+            <TooltipTrigger>
               <div className="hidden select-none sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md border border-border/50 shadow-sm text-xs font-semibold text-foreground">
                 <Trophy className="h-3.5 w-3.5 text-amber-500" />
                 <span>Lvl {userLevel}</span>
                 <span className="text-muted-foreground font-normal">• {userXp}/{getRequiredXpForLevel(userLevel)} XP</span>
               </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                {getRequiredXpForLevel(userLevel) - userXp} XP till next level!
-              </TooltipContent>
+            </TooltipTrigger>
+            <TooltipContent>
+              {getRequiredXpForLevel(userLevel) - userXp} XP till next level!
+            </TooltipContent>
           </Tooltip>
 
           <Dialog>
             <Tooltip>
-              <DialogTrigger render={<TooltipTrigger render={<Button className="rounded-3xl bg-white dark:bg-zinc-800 text-black dark:text-white w-12 h-12 p-2 text-2xl text-center shadow-lg hover:scale-105 transition-all">🧑</Button>}/>}/>
+              <DialogTrigger render={<TooltipTrigger render={<Button className="rounded-3xl bg-white dark:bg-zinc-800 text-black dark:text-white w-12 h-12 p-2 text-2xl text-center shadow-lg hover:scale-105 transition-all">🧑</Button>} />} />
               <TooltipContent>User Profile & Settings (Level {userLevel})</TooltipContent>
             </Tooltip>
-          <DialogContent className="h-max min-h-90 w-[90vw] !max-w-none">
-            <Tabs defaultValue="userset" className="flex items-center">
-              <TabsList className="flex gap-x-3">
-                <TabsTrigger value="userset">
-                  <User className="mr-1.5 h-4 w-4" /> User Settings
-                </TabsTrigger>
-                <TabsTrigger value="rewards">
-                  <Trophy className="mr-1.5 h-4 w-4" /> Progress
-                </TabsTrigger>
-                <TabsTrigger value="personalization">
-                  <Palette className="mr-1.5 h-4 w-4" /> Personalization
-                </TabsTrigger>
-              </TabsList>
+            <DialogContent className="h-max min-h-90 w-[90vw] !max-w-none">
+              <Tabs defaultValue="userset" className="flex items-center">
+                <TabsList className="flex gap-x-3">
+                  <TabsTrigger value="userset">
+                    <User className="mr-1.5 h-4 w-4" /> User Settings
+                  </TabsTrigger>
+                  <TabsTrigger value="rewards">
+                    <Trophy className="mr-1.5 h-4 w-4" /> Progress
+                  </TabsTrigger>
+                  <TabsTrigger value="personalization">
+                    <Palette className="mr-1.5 h-4 w-4" /> Personalization
+                  </TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="userset" className="p-8 w-full select-none max-w-full flex flex-col items-center">
-                <DialogHeader className="flex flex-col w-[60%]">
-                  <DialogTitle>Edit Profile</DialogTitle>
-                  <DialogDescription>Update your personal profile and preferences. Updates are saved to your secure account.</DialogDescription>
-                </DialogHeader>
+                <TabsContent value="userset" className="p-8 w-full select-none max-w-full flex flex-col items-center">
+                  <DialogHeader className="flex flex-col w-[60%]">
+                    <DialogTitle>Edit Profile</DialogTitle>
+                    <DialogDescription>Update your personal profile and preferences. Updates are saved to your secure account.</DialogDescription>
+                  </DialogHeader>
 
-                <form onSubmit={handleSaveProfile} className="space-y-6 py-6">
-                  <FieldGroup className="space-y-4 w-[50vw]">
-                    <Field>
-                      <Label htmlFor="name-input">Full Name</Label>
-                      <Input id="name-input" name="name" value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="Your name" className="mt-1" />
-                    </Field>
-                    <Field>
-                      <Label htmlFor="username-input">Username</Label>
-                      <Input id="username-input" name="username" value={profileUsername} onChange={(e) => setProfileUsername(e.target.value)} placeholder="@username" className="mt-1" />
-                    </Field>
-                    <Field>
-                      <Label>Account Email</Label>
-                      <Input disabled value={currentUser?.email || "Signed In"} className="mt-1 opacity-70 cursor-not-allowed bg-muted" />
-                    </Field>
-                    <Field className="flex flex-row items-center justify-between pt-2 border-t border-border/50">
-                      <div className="space-y-0.5">
-                        <Label>Theme Preference</Label>
-                        <p className="text-xs text-muted-foreground">Switch between light, dark, or explore themes</p>
-                      </div>
-                      <ThemeSlider currentTheme={currentTheme} onThemeChange={handleThemeChange} />
-                    </Field>
-                  </FieldGroup>
+                  <form onSubmit={handleSaveProfile} className="space-y-6 py-6">
+                    <FieldGroup className="space-y-4 w-[50vw]">
+                      <Field>
+                        <Label htmlFor="name-input">Full Name</Label>
+                        <Input id="name-input" name="name" value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="Your name" className="mt-1" />
+                      </Field>
+                      <Field>
+                        <Label htmlFor="username-input">Username</Label>
+                        <Input id="username-input" name="username" value={profileUsername} onChange={(e) => setProfileUsername(e.target.value)} placeholder="@username" className="mt-1" />
+                      </Field>
+                      <Field>
+                        <Label>Account Email</Label>
+                        <Input disabled value={currentUser?.email || "Signed In"} className="mt-1 opacity-70 cursor-not-allowed bg-muted" />
+                      </Field>
+                      <Field className="flex flex-row items-center justify-between pt-2 border-t border-border/50">
+                        <div className="space-y-0.5">
+                          <Label>Theme Preference</Label>
+                          <p className="text-xs text-muted-foreground">Switch between light, dark, or explore themes</p>
+                        </div>
+                        <ThemeSlider currentTheme={currentTheme} onThemeChange={handleThemeChange} />
+                      </Field>
+                    </FieldGroup>
 
-                  <DialogFooter className="flex items-center justify-between pt-4 border-t border-border/50">
-                    <Button type="button" variant="destructive" onClick={handleSignOut} className="gap-2">
-                      <LogOut className="h-4 w-4" /> Sign Out
-                    </Button>
-                    <div className="flex items-center gap-3">
-                      {profileSaveStatus && (
-                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> {profileSaveStatus}
-                        </span>
-                      )}
-                      <DialogClose render={<Button variant="outline">Cancel</Button>} />
-                      <Button type="submit" disabled={isSavingProfile}>
-                        {isSavingProfile ? "Saving..." : "Save changes"}
+                    <DialogFooter className="flex items-center justify-between pt-4 border-t border-border/50">
+                      <Button type="button" variant="destructive" onClick={handleSignOut} className="gap-2">
+                        <LogOut className="h-4 w-4" /> Sign Out
                       </Button>
+                      <div className="flex items-center gap-3">
+                        {profileSaveStatus && (
+                          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> {profileSaveStatus}
+                          </span>
+                        )}
+                        <DialogClose render={<Button variant="outline">Cancel</Button>} />
+                        <Button type="submit" disabled={isSavingProfile}>
+                          {isSavingProfile ? "Saving..." : "Save changes"}
+                        </Button>
+                      </div>
+                    </DialogFooter>
+                  </form>
+                </TabsContent>
+
+                <TabsContent value="rewards" className="p-8 w-full max-w-2xl select-none">
+                  <DialogHeader>
+                    <DialogTitle>Progress</DialogTitle>
+                    <DialogDescription>Track your streak, study habits, and level progression.</DialogDescription>
+                  </DialogHeader>
+
+                  <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col gap-2.5 my-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary text-primary-foreground font-bold text-base shadow-xs">
+                          {userLevel}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-foreground">Level {userLevel}</h4>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold uppercase tracking-wider">
+                              Rank
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {userXp >= getRequiredXpForLevel(userLevel)
+                              ? "Ready to level up!"
+                              : `${Math.round((getRequiredXpForLevel(userLevel) - userXp) * 10) / 10} XP needed to reach Level ${userLevel + 1}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-mono font-semibold text-foreground">
+                          {userXp} / {getRequiredXpForLevel(userLevel)} XP
+                        </span>
+                      </div>
                     </div>
-                  </DialogFooter>
-                </form>
-              </TabsContent>
+                    <Progress
+                      value={Math.max(0, Math.min(100, (userXp / getRequiredXpForLevel(userLevel)) * 100))}
+                      className="h-2"
+                    />
 
-              <TabsContent value="rewards" className="p-8 w-full max-w-2xl select-none">
-                <DialogHeader>
-                  <DialogTitle>Progress</DialogTitle>
-                  <DialogDescription>Track your streak, study habits, and level progression.</DialogDescription>
-                </DialogHeader>
+                    {/* What unlocks in next level */}
+                    {(() => {
+                      const nextInfo = getNextRewardInfo(userLevel);
+                      if (!nextInfo) {
+                        return (
+                          <div className="pt-2 border-t border-border/40 flex items-center justify-between text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> All rewards unlocked! Master rank achieved.
+                            </span>
+                          </div>
+                        );
+                      }
 
-                <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col gap-2.5 my-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary text-primary-foreground font-bold text-base shadow-xs">
-                        {userLevel}
+                      return (
+                        <div className="pt-2 border-t border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                          <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                            <Trophy className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                            {nextInfo.isDirectNext ? (
+                              <span>Unlocks in Next Level (Level {nextInfo.level}):</span>
+                            ) : (
+                              <span>Level {userLevel + 1}: No unlock • Next reward at Level {nextInfo.level}:</span>
+                            )}
+                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {nextInfo.rewards.map((reward) => (
+                              <span
+                                key={reward.id}
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold text-[11px]"
+                              >
+                                {reward.type === "music" ? <HeadphonesIcon className="h-3 w-3" /> : <Palette className="h-3 w-3" />}
+                                {reward.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Achievements Grid */}
+                  <div className="grid grid-cols-2 gap-4 py-2 *:hover:shadow-black *:dark:hover:shadow-white *:hover:shadow-lg/10 *:duration-200">
+                    {/* 1. Tasks Completed */}
+                    <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                          <span className="text-xs font-semibold text-muted-foreground uppercase">Tasks Completed</span>
+                        </div>
+                        <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          {totalTasksCompleted % 10}/10 to next
+                        </span>
                       </div>
                       <div>
+                        <div className="flex items-baseline justify-between mb-1.5">
+                          <span className="text-2xl font-bold">{totalTasksCompleted} Tasks</span>
+                          <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalTasksCompleted / 10)} Achieved</span>
+                        </div>
+                        <Progress value={(totalTasksCompleted % 10) * 10} className="h-1.5" />
+                      </div>
+                    </div>
+
+                    {/* 2. Focus Minutes Completed */}
+                    <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-foreground">Level {userLevel}</h4>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold uppercase tracking-wider">
-                            Rank
-                          </span>
+                          <Clock className="h-4 w-4 text-sky-500" />
+                          <span className="text-xs font-semibold text-muted-foreground uppercase">Focus Minutes Completed</span>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {userXp >= getRequiredXpForLevel(userLevel)
-                            ? "Ready to level up!"
-                            : `${Math.round((getRequiredXpForLevel(userLevel) - userXp) * 10) / 10} XP needed to reach Level ${userLevel + 1}`}
-                        </p>
+                        <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400">
+                          {totalFocusMinutes % 60}/60 mins to next
+                        </span>
+                      </div>
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1.5">
+                          <span className="text-2xl font-bold">
+                            {totalFocusMinutes} Minutes
+                          </span>
+                          <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalFocusMinutes / 60)} Achieved</span>
+                        </div>
+                        <Progress value={((totalFocusMinutes % 60) / 60) * 100} className="h-1.5" />
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-sm font-mono font-semibold text-foreground">
-                        {userXp} / {getRequiredXpForLevel(userLevel)} XP
-                      </span>
+
+                    {/* 3. Journals Logged */}
+                    <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <NotebookPen className="h-4 w-4 text-indigo-500" />
+                          <span className="text-xs font-semibold text-muted-foreground uppercase">Journals Logged</span>
+                        </div>
+                        <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                          {totalJournalsLogged % 10}/10 to next
+                        </span>
+                      </div>
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1.5">
+                          <span className="text-2xl font-bold">{totalJournalsLogged} Journals</span>
+                          <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalJournalsLogged / 10)} Achieved</span>
+                        </div>
+                        <Progress value={(totalJournalsLogged % 10) * 10} className="h-1.5" />
+                      </div>
+                    </div>
+
+                    {/* 4. Prompts Entered */}
+                    <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <BrainCircuit className="h-4 w-4 text-purple-500" />
+                          <span className="text-xs font-semibold text-muted-foreground uppercase">Prompts Entered</span>
+                        </div>
+                        <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400">
+                          {totalPromptsEntered % 10}/10 to next
+                        </span>
+                      </div>
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1.5">
+                          <span className="text-2xl font-bold">{totalPromptsEntered} Prompts</span>
+                          <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalPromptsEntered / 10)} Achieved</span>
+                        </div>
+                        <Progress value={(totalPromptsEntered % 10) * 10} className="h-1.5" />
+                      </div>
                     </div>
                   </div>
-                  <Progress
-                    value={Math.max(0, Math.min(100, (userXp / getRequiredXpForLevel(userLevel)) * 100))}
-                    className="h-2"
-                  />
+                </TabsContent>
 
-                  {/* What unlocks in next level */}
-                  {(() => {
-                    const nextInfo = getNextRewardInfo(userLevel);
-                    if (!nextInfo) {
-                      return (
-                        <div className="pt-2 border-t border-border/40 flex items-center justify-between text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> All rewards unlocked! Master rank achieved.
-                          </span>
-                        </div>
-                      );
-                    }
+                <TabsContent value="personalization" className="flex flex-col items-start pb-10 p-8">
+                  <div className="flex items-center justify-between w-[70vw] my-5 select-none">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-semibold">Background Theme</Label>
+                      <p className="text-xs text-muted-foreground">Pick your preferred background theme. Changes update instantly for your account.</p>
+                    </div>
+                    {backgroundImage && (
+                      <Button variant="outline" size="sm" onClick={clearWallpaper}>
+                        Reset to Default
+                      </Button>
+                    )}
+                  </div>
 
-                    return (
-                      <div className="pt-2 border-t border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                        <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-                          <Trophy className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                          {nextInfo.isDirectNext ? (
-                            <span>Unlocks in Next Level (Level {nextInfo.level}):</span>
-                          ) : (
-                            <span>Level {userLevel + 1}: No unlock • Next reward at Level {nextInfo.level}:</span>
-                          )}
-                        </span>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {nextInfo.rewards.map((reward) => (
-                            <span
-                              key={reward.id}
-                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold text-[11px]"
+                  <Carousel className="w-[70vw]">
+                    <CarouselContent className="*:select-none p-10">
+                      {WALLPAPERS.map((wp) => {
+                        const isLocked = (wp.minLevel || 1) > userLevel;
+                        const isSelected = wp.src === "" ? !backgroundImage : backgroundImage === wp.src;
+
+                        return (
+                          <CarouselItem key={wp.id} className="w-[10vw]! basis-1/3">
+                            <div
+                              onClick={() => {
+                                if (isLocked) return;
+                                handleSelectWallpaper(wp);
+                              }}
+                              className={`overflow-hidden rounded-xl border-2 transition-all p-1 relative ${isLocked
+                                  ? "cursor-not-allowed opacity-60 grayscale border-transparent"
+                                  : isSelected
+                                    ? "cursor-pointer border-primary ring-2 ring-primary shadow-lg scale-102"
+                                    : "cursor-pointer border-transparent hover:border-muted-foreground/50"
+                                }`}
                             >
-                              {reward.type === "music" ? <HeadphonesIcon className="h-3 w-3" /> : <Palette className="h-3 w-3" />}
-                              {reward.name}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
+                              {wp.src ? (
+                                <img src={wp.src} alt={wp.title} className="w-full h-40 object-cover rounded-lg" />
+                              ) : (
+                                <div className="w-full h-40 rounded-lg bg-linear-to-br from-zinc-200 to-zinc-300 dark:from-zinc-800 dark:to-zinc-950 flex flex-col items-center justify-center border border-border/50">
+                                  <Palette className="h-8 w-8 text-muted-foreground/70 mb-2" />
+                                  <span className="text-xs font-semibold text-muted-foreground">Default Theme</span>
+                                </div>
+                              )}
 
-                {/* Achievements Grid */}
-                <div className="grid grid-cols-2 gap-4 py-2 *:hover:shadow-black *:dark:hover:shadow-white *:hover:shadow-lg/10 *:duration-200">
-                  {/* 1. Tasks Completed */}
-                  <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        <span className="text-xs font-semibold text-muted-foreground uppercase">Tasks Completed</span>
-                      </div>
-                      <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                        {totalTasksCompleted % 10}/10 to next
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex items-baseline justify-between mb-1.5">
-                        <span className="text-2xl font-bold">{totalTasksCompleted} Tasks</span>
-                        <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalTasksCompleted / 10)} Achieved</span>
-                      </div>
-                      <Progress value={(totalTasksCompleted % 10) * 10} className="h-1.5" />
-                    </div>
-                  </div>
+                              {/* Locked Dull Overlay */}
+                              {isLocked && (
+                                <div className="absolute inset-1 bg-black/60 backdrop-blur-[1px] rounded-lg flex flex-col items-center justify-center p-2 text-center text-white">
+                                  <Lock className="h-6 w-6 text-white mb-1.5" />
+                                  <span className="text-xs font-semibold text-white/95 leading-tight">
+                                    will unlock at Level {wp.minLevel}
+                                  </span>
+                                </div>
+                              )}
 
-                  {/* 2. Focus Minutes Completed */}
-                  <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-sky-500" />
-                        <span className="text-xs font-semibold text-muted-foreground uppercase">Focus Minutes Completed</span>
-                      </div>
-                      <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400">
-                        {totalFocusMinutes % 60}/60 mins to next
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex items-baseline justify-between mb-1.5">
-                        <span className="text-2xl font-bold">
-                          {totalFocusMinutes} Minutes
-                        </span>
-                        <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalFocusMinutes / 60)} Achieved</span>
-                      </div>
-                      <Progress value={((totalFocusMinutes % 60) / 60) * 100} className="h-1.5" />
-                    </div>
-                  </div>
-
-                  {/* 3. Journals Logged */}
-                  <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <NotebookPen className="h-4 w-4 text-indigo-500" />
-                        <span className="text-xs font-semibold text-muted-foreground uppercase">Journals Logged</span>
-                      </div>
-                      <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
-                        {totalJournalsLogged % 10}/10 to next
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex items-baseline justify-between mb-1.5">
-                        <span className="text-2xl font-bold">{totalJournalsLogged} Journals</span>
-                        <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalJournalsLogged / 10)} Achieved</span>
-                      </div>
-                      <Progress value={(totalJournalsLogged % 10) * 10} className="h-1.5" />
-                    </div>
-                  </div>
-
-                  {/* 4. Prompts Entered */}
-                  <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <BrainCircuit className="h-4 w-4 text-purple-500" />
-                        <span className="text-xs font-semibold text-muted-foreground uppercase">Prompts Entered</span>
-                      </div>
-                      <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400">
-                        {totalPromptsEntered % 10}/10 to next
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex items-baseline justify-between mb-1.5">
-                        <span className="text-2xl font-bold">{totalPromptsEntered} Prompts</span>
-                        <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalPromptsEntered / 10)} Achieved</span>
-                      </div>
-                      <Progress value={(totalPromptsEntered % 10) * 10} className="h-1.5" />
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="personalization" className="flex flex-col items-start pb-10 p-8">
-                <div className="flex items-center justify-between w-[70vw] my-5 select-none">
-                  <div className="space-y-0.5">
-                    <Label className="text-base font-semibold">Background Theme</Label>
-                    <p className="text-xs text-muted-foreground">Pick your preferred background theme. Changes update instantly for your account.</p>
-                  </div>
-                  {backgroundImage && (
-                    <Button variant="outline" size="sm" onClick={clearWallpaper}>
-                      Reset to Default
-                    </Button>
-                  )}
-                </div>
-
-                <Carousel className="w-[70vw]">
-                  <CarouselContent className="*:select-none p-10">
-                    {WALLPAPERS.map((wp) => {
-                      const isLocked = (wp.minLevel || 1) > userLevel;
-                      const isSelected = wp.src === "" ? !backgroundImage : backgroundImage === wp.src;
-
-                      return (
-                        <CarouselItem key={wp.id} className="w-[10vw]! basis-1/3">
-                          <div
-                            onClick={() => {
-                              if (isLocked) return;
-                              handleSelectWallpaper(wp);
-                            }}
-                            className={`overflow-hidden rounded-xl border-2 transition-all p-1 relative ${
-                              isLocked
-                                ? "cursor-not-allowed opacity-60 grayscale border-transparent"
-                                : isSelected
-                                ? "cursor-pointer border-primary ring-2 ring-primary shadow-lg scale-102"
-                                : "cursor-pointer border-transparent hover:border-muted-foreground/50"
-                            }`}
-                          >
-                            {wp.src ? (
-                              <img src={wp.src} alt={wp.title} className="w-full h-40 object-cover rounded-lg" />
-                            ) : (
-                              <div className="w-full h-40 rounded-lg bg-linear-to-br from-zinc-200 to-zinc-300 dark:from-zinc-800 dark:to-zinc-950 flex flex-col items-center justify-center border border-border/50">
-                                <Palette className="h-8 w-8 text-muted-foreground/70 mb-2" />
-                                <span className="text-xs font-semibold text-muted-foreground">Default Theme</span>
-                              </div>
-                            )}
-
-                            {/* Locked Dull Overlay */}
-                            {isLocked && (
-                              <div className="absolute inset-1 bg-black/60 backdrop-blur-[1px] rounded-lg flex flex-col items-center justify-center p-2 text-center text-white">
-                                <Lock className="h-6 w-6 text-white mb-1.5" />
-                                <span className="text-xs font-semibold text-white/95 leading-tight">
-                                  will unlock at Level {wp.minLevel}
-                                </span>
-                              </div>
-                            )}
-
-                            <p className="text-xs font-medium text-center mt-2 flex items-center justify-center gap-1">
-                              {isLocked && <Lock className="size-3 text-muted-foreground inline" />}
-                              <span>{wp.title}</span>
-                            </p>
-                          </div>
-                        </CarouselItem>
-                      );
-                    })}
-                  </CarouselContent>
-                  <CarouselPrevious />
-                  <CarouselNext />
-                </Carousel>
-              </TabsContent>
-            </Tabs>
-          </DialogContent>
-        </Dialog>
+                              <p className="text-xs font-medium text-center mt-2 flex items-center justify-center gap-1">
+                                {isLocked && <Lock className="size-3 text-muted-foreground inline" />}
+                                <span>{wp.title}</span>
+                              </p>
+                            </div>
+                          </CarouselItem>
+                        );
+                      })}
+                    </CarouselContent>
+                    <CarouselPrevious />
+                    <CarouselNext />
+                  </Carousel>
+                </TabsContent>
+              </Tabs>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
