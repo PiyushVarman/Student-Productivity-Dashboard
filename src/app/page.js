@@ -1007,7 +1007,7 @@ export default function Home() {
               </div>
               </TooltipTrigger>
               <TooltipContent>
-                {getRequiredXpForLevel(userLevel) - userXp} xp till next level!
+                {getRequiredXpForLevel(userLevel) - userXp} XP till next level!
               </TooltipContent>
           </Tooltip>
 
