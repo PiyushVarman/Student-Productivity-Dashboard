@@ -807,11 +807,18 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden select-none sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md border border-border/50 shadow-sm text-xs font-semibold text-foreground">
-            <Trophy className="h-3.5 w-3.5 text-amber-500" />
-            <span>Lvl {userLevel}</span>
-            <span className="text-muted-foreground font-normal">• {userXp}/{getRequiredXpForLevel(userLevel)} XP</span>
-          </div>
+          <Tooltip>
+              <TooltipTrigger>
+              <div className="hidden select-none sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md border border-border/50 shadow-sm text-xs font-semibold text-foreground">
+                <Trophy className="h-3.5 w-3.5 text-amber-500" />
+                <span>Lvl {userLevel}</span>
+                <span className="text-muted-foreground font-normal">• {userXp}/{getRequiredXpForLevel(userLevel)} XP</span>
+              </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {getRequiredXpForLevel(userLevel) - userXp} xp till next level!
+              </TooltipContent>
+          </Tooltip>
 
           <Dialog>
             <Tooltip>
