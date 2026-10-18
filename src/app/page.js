@@ -38,6 +38,8 @@ const WALLPAPERS = [
   { id: "pastel", src: "/wallpapers/pastel.png", title: "Pastel", theme: "light" },
   { id: "BND", src: "/wallpapers/brandnewday.webp", title: "Brand New Day", theme: "dark" },
   { id: "filmburn", src: "/wallpapers/filmburn.png", title: "Film Burn", theme: "dark" },
+  { id: "studydesk", src: "/wallpapers/study_desk.png", title: "Study Desk", theme: "light" },
+  { id: "Space", src: "/wallpapers/space.jpg", title: "Outer Space", theme: "dark" },
   { id: "goldengatelight", src: "/wallpapers/goldengatelight.png", title: "macOS Golden Gate (Light)", theme: "light" },
   { id: "goldengatedark", src: "/wallpapers/goldengatedark.png", title: "macOS Golden Gate (Dark)", theme: "dark" },
 ];
