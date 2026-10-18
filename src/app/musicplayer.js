@@ -72,8 +72,8 @@ const tracks = [
   {
     id: "track-7",
     name: "Keyboard ASMR",
-    src: "/music/KeyboardASMR.mp3",
-    data: { title: "Keyboard ASMR", artist: "Sailor Kaye" },
+    src: "/music/Keyboardasmr.mp3",
+    data: { title: "Keyboard ASMR", artist: "faye" },
   },
 ]
 
