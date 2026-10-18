@@ -125,6 +125,122 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+.sunset {
+  @apply bg-amber-400;
+  --background: oklch(0.90 0.12 85);
+  --foreground: oklch(0.26 0.10 45);
+  --card: oklch(0.93 0.08 85);
+  --card-foreground: oklch(0.26 0.10 45);
+  --popover: oklch(0.93 0.08 85);
+  --popover-foreground: oklch(0.26 0.10 45);
+  --primary: oklch(0.68 0.22 45);
+  --primary-foreground: oklch(0.98 0.03 85);
+  --secondary: oklch(0.86 0.14 85);
+  --secondary-foreground: oklch(0.26 0.10 45);
+  --muted: oklch(0.88 0.08 82);
+  --muted-foreground: oklch(0.42 0.10 48);
+  --accent: oklch(0.80 0.16 65);
+  --accent-foreground: oklch(0.26 0.10 45);
+  --destructive: oklch(0.60 0.22 28);
+  --border: oklch(0.75 0.16 60 / 40%);
+  --input: oklch(0.75 0.16 60 / 40%);
+  --ring: oklch(0.68 0.22 45);
+  --sidebar: oklch(0.92 0.10 82);
+  --sidebar-foreground: oklch(0.26 0.10 45);
+  --sidebar-primary: oklch(0.68 0.22 45);
+  --sidebar-primary-foreground: oklch(0.98 0.03 85);
+  --sidebar-accent: oklch(0.86 0.14 85);
+  --sidebar-accent-foreground: oklch(0.26 0.10 45);
+  --sidebar-border: oklch(0.75 0.16 60 / 40%);
+  --sidebar-ring: oklch(0.68 0.22 45);
+}
+
+/* Sunset Theme overrides: replace white & maroon with rich golden yellow & sunset orange */
+.sunset .bg-white,
+.sunset .bg-white\/90,
+.sunset .bg-white\/80 {
+  background-color: rgb(254 243 199 / 0.92) !important; /* amber-100 golden glow */
+  border-color: rgb(245 158 11 / 0.35) !important;
+}
+
+.sunset .bg-gray-100,
+.sunset .bg-gray-200,
+.sunset .bg-gray-300 {
+  background-color: rgb(253 230 138 / 0.85) !important; /* yellow-200 golden tint */
+  border-color: rgb(245 158 11 / 0.3) !important;
+}
+
+.sunset .text-black {
+  color: #431407 !important; /* deep bronze-amber text */
+}
+
+.sunset .border-border,
+.sunset .border-border\/40,
+.sunset .border-border\/50,
+.sunset .border-border\/60 {
+  border-color: rgb(249 115 22 / 0.35) !important;
+}
+
+.sunset .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(234, 88, 12, 0.22) !important;
+}
+
+/* AI Chat textarea in sunset mode */
+.sunset textarea.bg-black\/50 {
+  background-color: rgb(254 240 138 / 0.9) !important;
+  color: #431407 !important;
+  border: 1.5px solid rgb(249 115 22 / 0.5) !important;
+}
+
+.sunset textarea.bg-black\/50::placeholder {
+  color: rgb(180 83 9 / 0.8) !important;
+}
+
+.sunset textarea.bg-black\/50:focus {
+  background-color: rgb(255 251 235 / 0.98) !important;
+  border-color: #ea580c !important;
+}
+
+/* Theme Slider custom smooth thumb styling */
+.theme-slider-input {
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+
+.theme-slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 9999px;
+  background: var(--slider-thumb, #f59e0b);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  cursor: grab;
+  transition: transform 0.12s ease, background-color 0.2s ease;
+}
+
+.theme-slider-input:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.15);
+}
+
+.theme-slider-input::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 9999px;
+  background: var(--slider-thumb, #f59e0b);
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  cursor: grab;
+  transition: transform 0.12s ease, background-color 0.2s ease;
+}
+
+.theme-slider-input:active::-moz-range-thumb {
+  cursor: grabbing;
+  transform: scale(1.15);
+}
+
 @layer base {
   [hidden] {
     display: none !important;

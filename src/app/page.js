@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import ReactMarkdown from "react-markdown";
-import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2, SendHorizontal, LogOut, Download, CheckCircle2, Loader2, CircleAlertIcon, FileArchiveIcon, FileSpreadsheetIcon, FileTextIcon, HeadphonesIcon, ImageIcon, RefreshCwIcon, UploadIcon, VideoIcon, XIcon, Lock } from "lucide-react";
+import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2, SendHorizontal, LogOut, Download, CheckCircle2, Loader2, CircleAlertIcon, FileArchiveIcon, FileSpreadsheetIcon, FileTextIcon, HeadphonesIcon, ImageIcon, RefreshCwIcon, UploadIcon, VideoIcon, XIcon, Lock, Clock, BrainCircuit } from "lucide-react";
+import ThemeSlider from "@/components/ThemeSlider";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Dialog, DialogTitle, DialogHeader, DialogDescription, DialogTrigger, DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,18 @@ export default function Home() {
 
   // Appearance & Theme State
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState("light");
   const [backgroundImage, setBackgroundImage] = useState("");
+
+  // Achievements State
+  const [totalTasksCompleted, setTotalTasksCompleted] = useState(0);
+  const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
+  const [totalJournalsLogged, setTotalJournalsLogged] = useState(0);
+  const [totalPromptsEntered, setTotalPromptsEntered] = useState(0);
+
+  // Achievement Notification Pop-up State
+  const [achievementNotification, setAchievementNotification] = useState(null);
+  const achievementTimeoutRef = useRef(null);
 
   // Journal State
   const [journalText, setJournalText] = useState("");
@@ -87,6 +99,7 @@ export default function Home() {
   const userXpRef = useRef(0);
   const [levelUpNotification, setLevelUpNotification] = useState(null);
   const levelUpTimeoutRef = useRef(null);
+  const togglingTasksRef = useRef(new Set());
 
   // 1. Monitor Authentication State
   useEffect(() => {
@@ -117,14 +130,25 @@ export default function Home() {
             userXpRef.current = loadedXp;
 
             if (data.theme) {
-              const shouldBeDark = data.theme === "dark";
+              const themeName = data.theme;
+              setCurrentTheme(themeName);
+              const shouldBeDark = themeName === "dark";
+              const isSunset = themeName === "sunset";
               setIsDarkMode(shouldBeDark);
+
+              document.documentElement.classList.remove("dark", "sunset");
               if (shouldBeDark) {
                 document.documentElement.classList.add("dark");
-              } else {
-                document.documentElement.classList.remove("dark");
+              } else if (isSunset) {
+                document.documentElement.classList.add("sunset");
               }
             }
+
+            // Load isolated achievements
+            setTotalTasksCompleted(data.totalTasksCompleted !== undefined ? Number(data.totalTasksCompleted) : 0);
+            setTotalFocusMinutes(data.totalFocusMinutes !== undefined ? Number(data.totalFocusMinutes) : 0);
+            setTotalJournalsLogged(data.totalJournalsLogged !== undefined ? Number(data.totalJournalsLogged) : 0);
+            setTotalPromptsEntered(data.totalPromptsEntered !== undefined ? Number(data.totalPromptsEntered) : 0);
 
             if (data.backgroundImage !== undefined) {
               const wp = WALLPAPERS.find((w) => w.src === data.backgroundImage);
@@ -191,6 +215,32 @@ export default function Home() {
           const xpVal = Number(data.xp);
           setUserXp(xpVal);
           userXpRef.current = xpVal;
+        }
+        if (data.theme) {
+          const themeName = data.theme;
+          setCurrentTheme(themeName);
+          const shouldBeDark = themeName === "dark";
+          const isSunset = themeName === "sunset";
+          setIsDarkMode(shouldBeDark);
+
+          document.documentElement.classList.remove("dark", "sunset");
+          if (shouldBeDark) {
+            document.documentElement.classList.add("dark");
+          } else if (isSunset) {
+            document.documentElement.classList.add("sunset");
+          }
+        }
+        if (data.totalTasksCompleted !== undefined) {
+          setTotalTasksCompleted(Number(data.totalTasksCompleted));
+        }
+        if (data.totalFocusMinutes !== undefined) {
+          setTotalFocusMinutes(Number(data.totalFocusMinutes));
+        }
+        if (data.totalJournalsLogged !== undefined) {
+          setTotalJournalsLogged(Number(data.totalJournalsLogged));
+        }
+        if (data.totalPromptsEntered !== undefined) {
+          setTotalPromptsEntered(Number(data.totalPromptsEntered));
         }
         if (data.backgroundImage !== undefined) {
           const currentLevel = userLevelRef.current;
@@ -291,6 +341,48 @@ export default function Home() {
     [currentUser, triggerLevelUpToast]
   );
 
+  // Trigger Achievement Toast Notification
+  const triggerAchievementToast = useCallback((payload) => {
+    if (achievementTimeoutRef.current) {
+      clearTimeout(achievementTimeoutRef.current);
+    }
+    setAchievementNotification(payload);
+    achievementTimeoutRef.current = setTimeout(() => {
+      setAchievementNotification(null);
+    }, 5500);
+  }, []);
+
+  // Minute-by-minute Focus tracking (achievement: 1 hr = 10 XP)
+  const handleFocusMinuteComplete = useCallback(
+    (minutes = 1) => {
+      if (!currentUser || !db) return;
+
+      setTotalFocusMinutes((prev) => {
+        const updated = prev + minutes;
+        const prevHours = Math.floor(prev / 60);
+        const newHours = Math.floor(updated / 60);
+
+        if (newHours > prevHours) {
+          triggerAchievementToast({
+            title: `Focus Master: ${newHours} Hour${newHours > 1 ? "s" : ""} Completed!`,
+            description: `You have completed ${newHours} full hour${newHours > 1 ? "s" : ""} of dedicated study time!`,
+            metric: `${newHours} Hours`,
+          });
+          applyXpChange(10);
+        }
+
+        setDoc(
+          doc(db, "users", currentUser.uid),
+          { totalFocusMinutes: updated, updatedAt: serverTimestamp() },
+          { merge: true }
+        ).catch((err) => console.error("Failed to save focus minutes:", err));
+
+        return updated;
+      });
+    },
+    [currentUser, triggerAchievementToast, applyXpChange]
+  );
+
   // Focus Session Complete Handler (1.5 XP per minute on 00:00 completion)
   const handleFocusSessionComplete = useCallback(
     (minutes) => {
@@ -341,22 +433,33 @@ export default function Home() {
     }
   };
 
-  const toggleTheme = async () => {
-    const nextState = !isDarkMode;
-    const nextTheme = nextState ? "dark" : "light";
-    setIsDarkMode(nextState);
+  const handleThemeChange = async (themeName) => {
+    setCurrentTheme(themeName);
+    const shouldBeDark = themeName === "dark";
+    const isSunset = themeName === "sunset";
+    setIsDarkMode(shouldBeDark);
 
-    if (nextState) {
+    document.documentElement.classList.remove("dark", "sunset");
+    if (shouldBeDark) {
       document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
+    } else if (isSunset) {
+      document.documentElement.classList.add("sunset");
+      triggerAchievementToast({
+        title: "Sunset Theme Discovered!",
+        description: "You unlocked the hidden sunset easter egg theme!",
+        metric: "Easter Egg",
+      });
     }
+
+    localStorage.setItem("theme", themeName);
 
     if (currentUser && db) {
       try {
-        await setDoc(doc(db, "users", currentUser.uid), { theme: nextTheme, updatedAt: serverTimestamp() }, { merge: true });
+        await setDoc(
+          doc(db, "users", currentUser.uid),
+          { theme: themeName, updatedAt: serverTimestamp() },
+          { merge: true }
+        );
       } catch (err) {
         console.error("Failed to update theme in Firestore:", err);
       }
@@ -374,15 +477,7 @@ export default function Home() {
     setBackgroundImage(wallpaper.src);
     localStorage.setItem("selected_wallpaper", wallpaper.src);
 
-    const shouldBeDark = wallpaper.theme === "dark";
-    setIsDarkMode(shouldBeDark);
-    localStorage.setItem("theme", wallpaper.theme);
-
-    if (shouldBeDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    handleThemeChange(wallpaper.theme);
 
     if (currentUser && db) {
       try {
@@ -434,6 +529,24 @@ export default function Home() {
         createdAt: serverTimestamp(),
       });
       applyXpChange(5);
+
+      setTotalJournalsLogged((prev) => {
+        const updated = prev + 1;
+        if (updated > 0 && updated % 10 === 0) {
+          triggerAchievementToast({
+            title: `Reflection Master: ${updated} Journals Logged!`,
+            description: `You've logged ${updated} journal entries! Great reflection habit!`,
+            metric: `${updated} Journals`,
+          });
+          applyXpChange(10);
+        }
+        setDoc(
+          doc(db, "users", currentUser.uid),
+          { totalJournalsLogged: updated, updatedAt: serverTimestamp() },
+          { merge: true }
+        ).catch((err) => console.error("Failed to save journals count:", err));
+        return updated;
+      });
     } catch (err) {
       console.error("Failed to save journal:", err);
       setJournalText(textToSave);
@@ -460,6 +573,24 @@ export default function Home() {
 
     // Prompting the chatbot gives +5 XP
     applyXpChange(5);
+
+    setTotalPromptsEntered((prev) => {
+      const updated = prev + 1;
+      if (updated > 0 && updated % 10 === 0) {
+        triggerAchievementToast({
+          title: `Curious Mind: ${updated} Prompts Entered!`,
+          description: `You've asked ${updated} prompts to the Study Buddy AI!`,
+          metric: `${updated} Prompts`,
+        });
+        applyXpChange(10);
+      }
+      setDoc(
+        doc(db, "users", currentUser.uid),
+        { totalPromptsEntered: updated, updatedAt: serverTimestamp() },
+        { merge: true }
+      ).catch((err) => console.error("Failed to save prompts count:", err));
+      return updated;
+    });
 
     try {
       await addDoc(collection(db, "users", currentUser.uid, "chats"), {
@@ -532,6 +663,9 @@ export default function Home() {
 
   const handleToggleTask = async (taskId, currentCompleted) => {
     if (!currentUser || !db) return;
+    if (togglingTasksRef.current.has(taskId)) return;
+    togglingTasksRef.current.add(taskId);
+
     try {
       const nextCompleted = !currentCompleted;
       await updateDoc(doc(db, "users", currentUser.uid, "todos", taskId), {
@@ -540,11 +674,33 @@ export default function Home() {
       // Task completion +15 XP, unchecking -15 XP
       if (nextCompleted) {
         applyXpChange(15);
+
+        setTotalTasksCompleted((prev) => {
+          const updated = prev + 1;
+          if (updated > 0 && updated % 10 === 0) {
+            triggerAchievementToast({
+              title: `Task Champion: ${updated} Tasks Completed!`,
+              description: `You've completed ${updated} tasks! Keep up the momentum!`,
+              metric: `${updated} Tasks`,
+            });
+            applyXpChange(10);
+          }
+          setDoc(
+            doc(db, "users", currentUser.uid),
+            { totalTasksCompleted: updated, updatedAt: serverTimestamp() },
+            { merge: true }
+          ).catch((err) => console.error("Failed to save tasks completed:", err));
+          return updated;
+        });
       } else {
         applyXpChange(-15);
       }
     } catch (err) {
       console.error("Failed to toggle task:", err);
+    } finally {
+      setTimeout(() => {
+        togglingTasksRef.current.delete(taskId);
+      }, 350);
     }
   };
 
@@ -765,7 +921,42 @@ export default function Home() {
   }
 
   return (
-    <div style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}} className={`flex flex-col flex-1 min-h-screen items-center justify-start font-sans transition-all duration-300 ${backgroundImage ? "bg-cover bg-center bg-no-repeat bg-fixed" : "bg-gray-200 dark:bg-black/50"}`}>
+    <div
+      style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}}
+      className={`flex flex-col flex-1 min-h-screen items-center justify-start font-sans transition-all duration-300 ${
+        backgroundImage
+          ? "bg-cover bg-center bg-no-repeat bg-fixed"
+          : currentTheme === "sunset"
+          ? "bg-gradient-to-br from-amber-400 via-orange-500 to-yellow-400"
+          : "bg-gray-200 dark:bg-black/50"
+      }`}
+    >
+      {/* Achievement Achieved Notification Pop-up */}
+      {achievementNotification && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto max-w-xl w-max">
+          <div className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 text-sm font-semibold">
+            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <Trophy className="h-4 w-4 text-white animate-bounce" />
+            </div>
+            <div className="flex flex-col pr-1">
+              <span className="text-[10px] uppercase tracking-wider text-white/90 font-bold">Achievement Achieved!</span>
+              <span className="text-sm font-bold text-white">{achievementNotification.title}</span>
+              <span className="text-xs text-white/80 font-normal">{achievementNotification.description}</span>
+            </div>
+            <span className="text-xs font-bold px-2.5 py-1 bg-white/25 rounded-full text-white shrink-0 ml-1">
+              +10 XP
+            </span>
+            <button
+              onClick={() => setAchievementNotification(null)}
+              className="ml-2 p-1 hover:bg-white/20 rounded-full transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Level Up Notification Pop-up */}
       {levelUpNotification && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto max-w-xl w-max">
@@ -862,19 +1053,9 @@ export default function Home() {
                     <Field className="flex flex-row items-center justify-between pt-2 border-t border-border/50">
                       <div className="space-y-0.5">
                         <Label>Theme Preference</Label>
-                        <p className="text-xs text-muted-foreground">Switch between light and dark mode appearance</p>
+                        <p className="text-xs text-muted-foreground">Switch between light, dark, or explore themes</p>
                       </div>
-                      <Button type="button" variant="outline" className="!w-32 flex items-center gap-2 cursor-pointer" onClick={toggleTheme}>
-                        {isDarkMode ? (
-                          <>
-                            <Sun className="h-4 w-4 text-amber-500" /> Light Mode
-                          </>
-                        ) : (
-                          <>
-                            <Moon className="h-4 w-4 text-indigo-500" /> Dark Mode
-                          </>
-                        )}
-                      </Button>
+                      <ThemeSlider currentTheme={currentTheme} onThemeChange={handleThemeChange} />
                     </Field>
                   </FieldGroup>
 
@@ -973,22 +1154,88 @@ export default function Home() {
                   })()}
                 </div>
 
+                {/* Achievements Grid */}
                 <div className="grid grid-cols-2 gap-4 py-2 *:hover:shadow-black *:dark:hover:shadow-white *:hover:shadow-lg/10 *:duration-200">
-                  <div className="p-4 rounded-xl bg-muted/40 flex flex-col gap-1">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase">Tasks Completed</span>
-                    <span className="text-2xl font-bold">{tasks.filter((t) => t.completed).length} Tasks</span>
+                  {/* 1. Tasks Completed */}
+                  <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        <span className="text-xs font-semibold text-muted-foreground uppercase">Tasks Completed</span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        {totalTasksCompleted % 10}/10 to next
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex items-baseline justify-between mb-1.5">
+                        <span className="text-2xl font-bold">{totalTasksCompleted} Tasks</span>
+                        <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalTasksCompleted / 10)} Achieved</span>
+                      </div>
+                      <Progress value={(totalTasksCompleted % 10) * 10} className="h-1.5" />
+                    </div>
                   </div>
-                  <div className="p-4 rounded-xl bg-muted/40 flex flex-col gap-1">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase">Journal Entries</span>
-                    <span className="text-2xl font-bold">{journalEntries.length} Entries</span>
+
+                  {/* 2. Focus Minutes Completed */}
+                  <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-sky-500" />
+                        <span className="text-xs font-semibold text-muted-foreground uppercase">Focus Minutes Completed</span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400">
+                        {totalFocusMinutes % 60}/60 mins to next
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex items-baseline justify-between mb-1.5">
+                        <span className="text-2xl font-bold">
+                          {totalFocusMinutes} Minutes
+                        </span>
+                        <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalFocusMinutes / 60)} Achieved</span>
+                      </div>
+                      <Progress value={((totalFocusMinutes % 60) / 60) * 100} className="h-1.5" />
+                    </div>
                   </div>
-                  <div className="p-4 rounded-xl bg-muted/40 flex flex-col gap-1">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase">Documents Stored</span>
-                    <span className="text-2xl font-bold">{uploadedDocs.length} Files</span>
+
+                  {/* 3. Journals Logged */}
+                  <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <NotebookPen className="h-4 w-4 text-indigo-500" />
+                        <span className="text-xs font-semibold text-muted-foreground uppercase">Journals Logged</span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                        {totalJournalsLogged % 10}/10 to next
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex items-baseline justify-between mb-1.5">
+                        <span className="text-2xl font-bold">{totalJournalsLogged} Journals</span>
+                        <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalJournalsLogged / 10)} Achieved</span>
+                      </div>
+                      <Progress value={(totalJournalsLogged % 10) * 10} className="h-1.5" />
+                    </div>
                   </div>
-                  <div className="p-4 rounded-xl bg-muted/40 flex flex-col gap-1">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase">ChatBot Usage</span>
-                    <span className="text-2xl font-bold">{messages.filter(m => m.role === 'user').length} Prompts</span>
+
+                  {/* 4. Prompts Entered */}
+                  <div className="p-4 rounded-xl bg-muted/40 border border-border/40 flex flex-col justify-between gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BrainCircuit className="h-4 w-4 text-purple-500" />
+                        <span className="text-xs font-semibold text-muted-foreground uppercase">Prompts Entered</span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400">
+                        {totalPromptsEntered % 10}/10 to next
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex items-baseline justify-between mb-1.5">
+                        <span className="text-2xl font-bold">{totalPromptsEntered} Prompts</span>
+                        <span className="text-xs font-mono text-muted-foreground">{Math.floor(totalPromptsEntered / 10)} Achieved</span>
+                      </div>
+                      <Progress value={(totalPromptsEntered % 10) * 10} className="h-1.5" />
+                    </div>
                   </div>
                 </div>
               </TabsContent>
@@ -1079,7 +1326,7 @@ export default function Home() {
 
             <TabsContent value="focus" keepMounted>
               <div className="flex grow bg-gray-300 shadow-md hover:scale-101 duration-200 animate-out rounded-xl h-full items-center justify-center">
-                <PomodoroTimer onFocusComplete={handleFocusSessionComplete} />
+                <PomodoroTimer onFocusComplete={handleFocusSessionComplete} onFocusMinuteComplete={handleFocusMinuteComplete} />
               </div>
             </TabsContent>
 
@@ -1246,7 +1493,9 @@ export default function Home() {
                       {tasks.map((task) => (
                         <div key={task.id} className="group flex items-center justify-between p-2 rounded-lg border border-border/50 bg-background/50 hover:bg-accent/40 transition-colors">
                           <div className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer" onClick={() => handleToggleTask(task.id, task.completed)}>
-                            <Checkbox checked={task.completed} onCheckedChange={() => handleToggleTask(task.id, task.completed)} className="border-foreground/50" />
+                            <div className="pointer-events-none">
+                              <Checkbox checked={task.completed} className="border-foreground/50" />
+                            </div>
                             <span className={`text-sm truncate transition-all ${task.completed ? "line-through text-muted-foreground" : "text-foreground font-medium"}`}>{task.title}</span>
                           </div>
 
