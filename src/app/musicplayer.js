@@ -1,6 +1,6 @@
 "use client"
 
-import { PauseIcon, PlayIcon, ListMusic } from "lucide-react"
+import { PauseIcon, PlayIcon, ListMusic, Lock } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
@@ -23,65 +23,21 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
+import { TRACKS } from "@/lib/rewards"
 
-export function AudioPlayer() {
+export function AudioPlayer({ userLevel = 1 }) {
   return (
     <AudioPlayerProvider>
-      <AudioPlayerDemo />
+      <AudioPlayerDemo userLevel={userLevel} />
     </AudioPlayerProvider>
   )
 }
 
-const tracks = [
-  {
-    id: "track-1",
-    name: "Snowman",
-    src: "/music/Snowman.mp3",
-    data: { title: "Snowman", artist: "WYS" },
-  },
-  {
-    id: "track-2",
-    name: "Close My Eyes",
-    src: "/music/CloseMyEyes.mp3",
-    data: { title: "Close My Eyes", artist: "WYS" },
-  },
-  {
-    id: "track-3",
-    name: "Solitude",
-    src: "/music/Solitude.mp3",
-    data: { title: "Solitude", artist: "DonVayei" },
-  },
-  {
-    id: "track-4",
-    name: "the songbird and the bookworm",
-    src: "/music/songbirdandbookworm.mp3",
-    data: { title: "the songbird and the bookworm", artist: "Blue Wednesday" },
-  },
-  {
-    id: "track-5",
-    name: "Growth Story",
-    src: "/music/GrowthStory.mp3",
-    data: { title: "Growth Story", artist: "Kupla" },
-  },
-  {
-    id: "track-6",
-    name: "40Hz Binaural Beats",
-    src: "/music/40HzBinauralBeats.mp3",
-    data: { title: "40Hz Binaural Beats", artist: "Be Inspired | Studio" },
-  },
-  {
-    id: "track-7",
-    name: "Keyboard ASMR",
-    src: "/music/Keyboardasmr.mp3",
-    data: { title: "Keyboard ASMR", artist: "faye" },
-  },
-]
-
-export const AudioPlayerDemo = () => {
+export const AudioPlayerDemo = ({ userLevel = 1 }) => {
   return (
     <Card className="w-full h-full flex flex-col justify-center p-4 bg-white/90 dark:bg-zinc-900/90">
       {/* Mini Player Section */}
-      <Player />
+      <Player userLevel={userLevel} />
 
       {/* Dialog for selecting tracks */}
       <div className="mt-3 flex justify-end">
@@ -106,11 +62,12 @@ export const AudioPlayerDemo = () => {
             {/* Added max-w-full min-w-0 */}
             <ScrollArea className="h-64 w-full max-w-full min-w-0 pr-3 mt-2">
               <div className="flex flex-col gap-1 w-full min-w-0 max-w-full">
-                {tracks.map((song, index) => (
+                {TRACKS.map((song, index) => (
                   <SongListItem
                     key={song.id}
                     song={song}
                     trackNumber={index + 1}
+                    userLevel={userLevel}
                   />
                 ))}
               </div>
@@ -122,19 +79,28 @@ export const AudioPlayerDemo = () => {
   )
 }
 
-const Player = () => {
+const Player = ({ userLevel = 1 }) => {
   const player = useAudioPlayer()
+  const activeTrack = TRACKS.find((t) => t.id === player.activeItem?.id)
+  const isLocked = activeTrack && (activeTrack.minLevel || 1) > userLevel
 
   return (
     <div className="w-full min-w-0">
       <div className="mb-2 min-w-0">
-        <h3 className="text-sm font-semibold truncate">
+        <h3 className="text-sm font-semibold truncate flex items-center gap-1.5">
           {player.activeItem?.data?.title ?? "No track selected"}
+          {isLocked && <Lock className="size-3.5 text-muted-foreground shrink-0 inline" />}
         </h3>
-        {player.activeItem?.data?.artist && (
-          <p className="text-xs text-muted-foreground truncate">
-            {player.activeItem.data.artist}
+        {isLocked ? (
+          <p className="text-xs text-amber-500 font-medium">
+            will unlock at Level {activeTrack.minLevel}
           </p>
+        ) : (
+          player.activeItem?.data?.artist && (
+            <p className="text-xs text-muted-foreground truncate">
+              {player.activeItem.data.artist}
+            </p>
+          )
         )}
       </div>
 
@@ -143,7 +109,7 @@ const Player = () => {
           variant="outline"
           size="default"
           className="h-10 w-10 shrink-0"
-          disabled={!player.activeItem}
+          disabled={!player.activeItem || isLocked}
         />
         <div className="flex flex-1 items-center gap-2 min-w-0">
           <AudioPlayerTime className="text-xs tabular-nums shrink-0" />
@@ -156,20 +122,24 @@ const Player = () => {
   )
 }
 
-const SongListItem = ({ song, trackNumber }) => {
+const SongListItem = ({ song, trackNumber, userLevel = 1 }) => {
   const player = useAudioPlayer()
   const isActive = player.isItemActive(song.id)
   const isCurrentlyPlaying = isActive && player.isPlaying
+  const isLocked = (song.minLevel || 1) > userLevel
 
   return (
     <Button
       variant={isActive ? "secondary" : "ghost"}
       size="sm"
+      disabled={isLocked}
       className={cn(
-        "h-10 w-full max-w-full min-w-0 justify-start px-3 font-normal",
-        isActive && "bg-secondary"
+        "h-10 w-full max-w-full min-w-0 justify-start px-3 font-normal transition-all",
+        isActive && "bg-secondary",
+        isLocked && "opacity-50 cursor-not-allowed bg-muted/20 hover:bg-muted/20 text-muted-foreground select-none"
       )}
       onClick={() => {
+        if (isLocked) return
         if (isCurrentlyPlaying) {
           player.pause()
         } else {
@@ -182,9 +152,11 @@ const SongListItem = ({ song, trackNumber }) => {
       }}
     >
       <div className="flex w-full min-w-0 items-center gap-3">
-        {/* Play/Pause Icon */}
+        {/* Play/Pause/Lock Icon */}
         <div className="flex w-4 shrink-0 items-center justify-center">
-          {isCurrentlyPlaying ? (
+          {isLocked ? (
+            <Lock className="size-3.5 text-muted-foreground shrink-0" />
+          ) : isCurrentlyPlaying ? (
             <PauseIcon className="size-4" />
           ) : (
             <PlayIcon className="size-4" />
@@ -192,15 +164,21 @@ const SongListItem = ({ song, trackNumber }) => {
         </div>
 
         {/* Truncated Track Title showing '...' */}
-        <span className="truncate text-left text-sm flex-1 min-w-0">
+        <span className={cn("truncate text-left text-sm flex-1 min-w-0", isLocked && "text-muted-foreground")}>
           {song.name}
         </span>
 
-        {/* Optional Artist Name */}
-        {song.data?.artist && (
-          <span className="text-xs text-muted-foreground shrink-0 pl-2">
-            {song.data.artist}
+        {/* Locked state label or Artist Name */}
+        {isLocked ? (
+          <span className="text-[11px] text-muted-foreground shrink-0 pl-2 font-medium">
+            will unlock at Level {song.minLevel}
           </span>
+        ) : (
+          song.data?.artist && (
+            <span className="text-xs text-muted-foreground shrink-0 pl-2">
+              {song.data.artist}
+            </span>
+          )
         )}
       </div>
     </Button>

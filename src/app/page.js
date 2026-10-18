@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import ReactMarkdown from "react-markdown";
-import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2, SendHorizontal, LogOut, Download, CheckCircle2, Loader2, CircleAlertIcon, FileArchiveIcon, FileSpreadsheetIcon, FileTextIcon, HeadphonesIcon, ImageIcon, RefreshCwIcon, UploadIcon, VideoIcon, XIcon } from "lucide-react";
+import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2, SendHorizontal, LogOut, Download, CheckCircle2, Loader2, CircleAlertIcon, FileArchiveIcon, FileSpreadsheetIcon, FileTextIcon, HeadphonesIcon, ImageIcon, RefreshCwIcon, UploadIcon, VideoIcon, XIcon, Lock } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Dialog, DialogTitle, DialogHeader, DialogDescription, DialogTrigger, DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -32,17 +32,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc, collection, addDoc, deleteDoc, updateDoc, query, orderBy, onSnapshot, serverTimestamp, getDocs, writeBatch } from "firebase/firestore";
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
-const WALLPAPERS = [
-  { id: "yourname", src: "/wallpapers/yourname.jpg", title: "your name.", theme: "dark" },
-  { id: "icons", src: "/wallpapers/icons.png", title: "Icons", theme: "dark" },
-  { id: "pastel", src: "/wallpapers/pastel.png", title: "Pastel", theme: "light" },
-  { id: "BND", src: "/wallpapers/brandnewday.webp", title: "Brand New Day", theme: "dark" },
-  { id: "filmburn", src: "/wallpapers/filmburn.png", title: "Film Burn", theme: "dark" },
-  { id: "studydesk", src: "/wallpapers/study_desk.png", title: "Study Desk", theme: "light" },
-  { id: "Space", src: "/wallpapers/space.jpg", title: "Outer Space", theme: "dark" },
-  { id: "goldengatelight", src: "/wallpapers/goldengatelight.png", title: "macOS Golden Gate (Light)", theme: "light" },
-  { id: "goldengatedark", src: "/wallpapers/goldengatedark.png", title: "macOS Golden Gate (Dark)", theme: "dark" },
-];
+import { WALLPAPERS, getRewardsForLevel, getUnlockedRewardsBetween, getNextRewardInfo } from "@/lib/rewards";
 
 export default function Home() {
   const router = useRouter();
@@ -137,7 +127,12 @@ export default function Home() {
             }
 
             if (data.backgroundImage !== undefined) {
-              setBackgroundImage(data.backgroundImage || "");
+              const wp = WALLPAPERS.find((w) => w.src === data.backgroundImage);
+              if (wp && (wp.minLevel || 1) > loadedLevel) {
+                setBackgroundImage("");
+              } else {
+                setBackgroundImage(data.backgroundImage || "");
+              }
             }
           } else {
             const defaultName = user.displayName || user.email?.split("@")[0] || "Student";
@@ -197,6 +192,15 @@ export default function Home() {
           setUserXp(xpVal);
           userXpRef.current = xpVal;
         }
+        if (data.backgroundImage !== undefined) {
+          const currentLevel = userLevelRef.current;
+          const wp = WALLPAPERS.find((w) => w.src === data.backgroundImage);
+          if (wp && (wp.minLevel || 1) > currentLevel) {
+            setBackgroundImage("");
+          } else {
+            setBackgroundImage(data.backgroundImage || "");
+          }
+        }
       }
     });
 
@@ -238,14 +242,17 @@ export default function Home() {
   }, [currentUser]);
 
   // Trigger Level Up Toast Notification
-  const triggerLevelUpToast = useCallback((newLevel) => {
+  const triggerLevelUpToast = useCallback((payload) => {
     if (levelUpTimeoutRef.current) {
       clearTimeout(levelUpTimeoutRef.current);
     }
-    setLevelUpNotification(newLevel);
+    const data = typeof payload === "number"
+      ? { level: payload, unlockedRewards: getRewardsForLevel(payload) }
+      : payload;
+    setLevelUpNotification(data);
     levelUpTimeoutRef.current = setTimeout(() => {
       setLevelUpNotification(null);
-    }, 4500);
+    }, 6000);
   }, []);
 
   // Apply XP Change (positive or negative)
@@ -263,7 +270,8 @@ export default function Home() {
       setUserXp(newXp);
 
       if (leveledUp) {
-        triggerLevelUpToast(newLevel);
+        const newlyUnlocked = getUnlockedRewardsBetween(currentLvl + 1, newLevel);
+        triggerLevelUpToast({ level: newLevel, unlockedRewards: newlyUnlocked });
       }
 
       try {
@@ -356,6 +364,13 @@ export default function Home() {
   };
 
   const handleSelectWallpaper = async (wallpaper) => {
+    if ((wallpaper.minLevel || 1) > userLevel) return;
+
+    if (!wallpaper.src) {
+      clearWallpaper();
+      return;
+    }
+
     setBackgroundImage(wallpaper.src);
     localStorage.setItem("selected_wallpaper", wallpaper.src);
 
@@ -753,13 +768,31 @@ export default function Home() {
     <div style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}} className={`flex flex-col flex-1 min-h-screen items-center justify-start font-sans transition-all duration-300 ${backgroundImage ? "bg-cover bg-center bg-no-repeat bg-fixed" : "bg-gray-200 dark:bg-black/50"}`}>
       {/* Level Up Notification Pop-up */}
       {levelUpNotification && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto">
-          <div className="flex items-center gap-2.5 px-5 py-2.5 bg-zinc-900/95 dark:bg-zinc-100/95 text-white dark:text-zinc-900 backdrop-blur-md rounded-full shadow-2xl border border-white/20 dark:border-black/20 text-sm font-semibold">
-            <Trophy className="h-4 w-4 text-amber-400 animate-bounce" />
-            <span>Level Up! You reached Level {levelUpNotification}!</span>
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto max-w-xl w-max">
+          <div className="flex flex-col sm:flex-row items-center gap-3 px-5 py-3 bg-zinc-900/95 dark:bg-zinc-100/95 text-white dark:text-zinc-900 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 dark:border-black/20 text-sm font-semibold">
+            <div className="flex items-center gap-2 shrink-0">
+              <Trophy className="h-5 w-5 text-amber-400 animate-bounce shrink-0" />
+              <span>Level Up! You reached Level {levelUpNotification.level}!</span>
+            </div>
+
+            {levelUpNotification.unlockedRewards && levelUpNotification.unlockedRewards.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap pl-0 sm:pl-3 sm:border-l sm:border-white/20 dark:sm:border-black/20">
+                <span className="text-xs text-amber-400 dark:text-amber-600 font-medium">Unlocked:</span>
+                {levelUpNotification.unlockedRewards.map((reward, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 dark:bg-black/10 text-xs font-semibold"
+                  >
+                    {reward.type === "music" ? <HeadphonesIcon className="h-3 w-3" /> : <Palette className="h-3 w-3" />}
+                    {reward.name}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <button
               onClick={() => setLevelUpNotification(null)}
-              className="ml-2 p-0.5 hover:bg-white/20 dark:hover:bg-black/20 rounded-full transition-colors cursor-pointer"
+              className="ml-auto p-1 hover:bg-white/20 dark:hover:bg-black/20 rounded-full transition-colors cursor-pointer"
               aria-label="Close"
             >
               <XIcon className="h-3.5 w-3.5" />
@@ -893,6 +926,44 @@ export default function Home() {
                     value={Math.max(0, Math.min(100, (userXp / getRequiredXpForLevel(userLevel)) * 100))}
                     className="h-2"
                   />
+
+                  {/* What unlocks in next level */}
+                  {(() => {
+                    const nextInfo = getNextRewardInfo(userLevel);
+                    if (!nextInfo) {
+                      return (
+                        <div className="pt-2 border-t border-border/40 flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> All rewards unlocked! Master rank achieved.
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="pt-2 border-t border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                        <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                          <Trophy className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          {nextInfo.isDirectNext ? (
+                            <span>Unlocks in Next Level (Level {nextInfo.level}):</span>
+                          ) : (
+                            <span>Level {userLevel + 1}: No unlock • Next reward at Level {nextInfo.level}:</span>
+                          )}
+                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {nextInfo.rewards.map((reward) => (
+                            <span
+                              key={reward.id}
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold text-[11px]"
+                            >
+                              {reward.type === "music" ? <HeadphonesIcon className="h-3 w-3" /> : <Palette className="h-3 w-3" />}
+                              {reward.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 py-2 *:hover:shadow-black *:dark:hover:shadow-white *:hover:shadow-lg/10 *:duration-200">
@@ -930,14 +1001,52 @@ export default function Home() {
 
                 <Carousel className="w-[70vw]">
                   <CarouselContent className="*:select-none p-10">
-                    {WALLPAPERS.map((wp) => (
-                      <CarouselItem key={wp.id} className="w-[10vw]! basis-1/3">
-                        <div onClick={() => handleSelectWallpaper(wp)} className={`cursor-pointer overflow-hidden rounded-xl border-2 transition-all p-1 ${backgroundImage === wp.src ? "border-primary ring-2 ring-primary shadow-lg scale-102" : "border-transparent hover:border-muted-foreground/50"}`}>
-                          <img src={wp.src} alt={wp.title} className="w-full h-40 object-cover rounded-lg" />
-                          <p className="text-xs font-medium text-center mt-2">{wp.title}</p>
-                        </div>
-                      </CarouselItem>
-                    ))}
+                    {WALLPAPERS.map((wp) => {
+                      const isLocked = (wp.minLevel || 1) > userLevel;
+                      const isSelected = wp.src === "" ? !backgroundImage : backgroundImage === wp.src;
+
+                      return (
+                        <CarouselItem key={wp.id} className="w-[10vw]! basis-1/3">
+                          <div
+                            onClick={() => {
+                              if (isLocked) return;
+                              handleSelectWallpaper(wp);
+                            }}
+                            className={`overflow-hidden rounded-xl border-2 transition-all p-1 relative ${
+                              isLocked
+                                ? "cursor-not-allowed opacity-60 grayscale border-transparent"
+                                : isSelected
+                                ? "cursor-pointer border-primary ring-2 ring-primary shadow-lg scale-102"
+                                : "cursor-pointer border-transparent hover:border-muted-foreground/50"
+                            }`}
+                          >
+                            {wp.src ? (
+                              <img src={wp.src} alt={wp.title} className="w-full h-40 object-cover rounded-lg" />
+                            ) : (
+                              <div className="w-full h-40 rounded-lg bg-linear-to-br from-zinc-200 to-zinc-300 dark:from-zinc-800 dark:to-zinc-950 flex flex-col items-center justify-center border border-border/50">
+                                <Palette className="h-8 w-8 text-muted-foreground/70 mb-2" />
+                                <span className="text-xs font-semibold text-muted-foreground">Default Theme</span>
+                              </div>
+                            )}
+
+                            {/* Locked Dull Overlay */}
+                            {isLocked && (
+                              <div className="absolute inset-1 bg-black/60 backdrop-blur-[1px] rounded-lg flex flex-col items-center justify-center p-2 text-center text-white">
+                                <Lock className="h-6 w-6 text-white mb-1.5" />
+                                <span className="text-xs font-semibold text-white/95 leading-tight">
+                                  will unlock at Level {wp.minLevel}
+                                </span>
+                              </div>
+                            )}
+
+                            <p className="text-xs font-medium text-center mt-2 flex items-center justify-center gap-1">
+                              {isLocked && <Lock className="size-3 text-muted-foreground inline" />}
+                              <span>{wp.title}</span>
+                            </p>
+                          </div>
+                        </CarouselItem>
+                      );
+                    })}
                   </CarouselContent>
                   <CarouselPrevious />
                   <CarouselNext />
@@ -1293,7 +1402,7 @@ export default function Home() {
           </div>
 
           <div className="h-[26.5vh] shadow-2xl backdrop-blur-md rounded-2xl mt-5">
-            <AudioPlayer />
+            <AudioPlayer userLevel={userLevel} />
           </div>
         </div>
       </div>
