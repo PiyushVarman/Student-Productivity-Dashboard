@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { getRequiredXpForLevel, calculateXpChange } from "@/lib/xp";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import ReactMarkdown from "react-markdown";
-import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2, SendHorizontal, LogOut, Download, CheckCircle2, Loader2, CircleAlertIcon, FileArchiveIcon, FileSpreadsheetIcon, FileTextIcon, HeadphonesIcon, ImageIcon, RefreshCwIcon, UploadIcon, VideoIcon, XIcon, Lock, Clock, BrainCircuit } from "lucide-react";
+import remarkGfm from "remark-gfm";
+import { CircleCheckBig, Files, NotebookPen, Timer, Trophy, User, Moon, Sun, Palette, Plus, Trash2, SendHorizontal, LogOut, Download, CheckCircle2, Loader2, CircleAlertIcon, FileArchiveIcon, FileSpreadsheetIcon, FileTextIcon, HeadphonesIcon, ImageIcon, RefreshCwIcon, UploadIcon, VideoIcon, XIcon, Lock, Clock, BrainCircuit, Sparkles, X } from "lucide-react";
 import ThemeSlider from "@/components/ThemeSlider";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Dialog, DialogTitle, DialogHeader, DialogDescription, DialogTrigger, DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -34,6 +35,44 @@ import { doc, getDoc, setDoc, collection, addDoc, deleteDoc, updateDoc, query, o
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
 import { WALLPAPERS, getRewardsForLevel, getUnlockedRewardsBetween, getNextRewardInfo } from "@/lib/rewards";
+
+// Clean raw LaTeX math notation and fix collapsed table rows
+function formatAssistantMessage(content) {
+  if (!content || typeof content !== "string") return content;
+  let text = content;
+
+  // Separate collapsed table rows (when | | occurs without a newline)
+  text = text.replace(/\|\s*\|\s*/g, "|\n| ");
+
+  // Resolve LaTeX \frac{a}{b} -> (a / b)
+  let prev;
+  let depth = 0;
+  do {
+    prev = text;
+    text = text.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "($1 / $2)");
+    depth++;
+  } while (text !== prev && depth < 10);
+
+  // Clean LaTeX markup commands
+  text = text
+    .replace(/\\text\{([^{}]+)\}/g, "$1")
+    .replace(/\\left\(/g, "(")
+    .replace(/\\right\)/g, ")")
+    .replace(/\\left\[/g, "[")
+    .replace(/\\right\]/g, "]")
+    .replace(/\\times/g, "×")
+    .replace(/\\cdot/g, "·")
+    .replace(/\\div/g, "÷")
+    .replace(/\\pm/g, "±")
+    .replace(/\\sum/g, "∑")
+    .replace(/\\sqrt\{([^{}]+)\}/g, "√($1)")
+    // Format standalone LaTeX display equations $$...$$ into clean bold formula callouts
+    .replace(/\$\$([\s\S]*?)\$\$/g, (m, formula) => `\n\n> **${formula.trim()}**\n\n`)
+    // Remove inline math dollar delimiters $f$ -> f, $15 - 25$ -> 15 - 25
+    .replace(/\$([^$\n]+)\$/g, "$1");
+
+  return text;
+}
 
 export default function Home() {
   const router = useRouter();
@@ -91,6 +130,25 @@ export default function Home() {
   const [fileErrors, setFileErrors] = useState([]);
   const [isClearAllDocsDialogOpen, setIsClearAllDocsDialogOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [selectedDocIds, setSelectedDocIds] = useState([]);
+
+  const selectedDocs = useMemo(() => {
+    return uploadedDocs.filter((d) => selectedDocIds.includes(d.id));
+  }, [uploadedDocs, selectedDocIds]);
+
+  const handleToggleDocSelection = (docId) => {
+    setSelectedDocIds((prev) =>
+      prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]
+    );
+  };
+
+  const handleToggleSelectAllDocs = () => {
+    if (selectedDocIds.length === uploadedDocs.length && uploadedDocs.length > 0) {
+      setSelectedDocIds([]);
+    } else {
+      setSelectedDocIds(uploadedDocs.map((d) => d.id));
+    }
+  };
 
   // XP & Progression State
   const [userLevel, setUserLevel] = useState(1);
@@ -280,6 +338,7 @@ export default function Home() {
     const unsubDocs = onSnapshot(docsQuery, (snapshot) => {
       const docItems = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
       setUploadedDocs(docItems);
+      setSelectedDocIds((prev) => prev.filter((id) => docItems.some((d) => d.id === id)));
     });
 
     return () => {
@@ -598,7 +657,15 @@ export default function Home() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: conversationToSend }),
+        body: JSON.stringify({
+          messages: conversationToSend,
+          selectedFiles: selectedDocs.map((doc) => ({
+            id: doc.id,
+            name: doc.name,
+            type: doc.type,
+            downloadUrl: doc.downloadUrl,
+          })),
+        }),
       });
 
       const data = await res.json();
@@ -790,6 +857,7 @@ export default function Home() {
         }
       }
       await deleteDoc(doc(db, "users", currentUser.uid, "documents", docItem.id));
+      setSelectedDocIds((prev) => prev.filter((id) => id !== docItem.id));
     } catch (err) {
       console.error("Failed to delete document:", err);
     }
@@ -811,6 +879,7 @@ export default function Home() {
         await deleteDoc(doc(db, "users", currentUser.uid, "documents", item.id));
       }
       setUploadingQueue([]);
+      setSelectedDocIds([]);
     } catch (err) {
       console.error("Failed to clear all documents:", err);
     }
@@ -1420,8 +1489,28 @@ export default function Home() {
                     {msg.role === "user" ? (
                       msg.content
                     ) : (
-                      <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed overflow-x-auto">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            table: ({ node, ...props }) => (
+                              <div className="overflow-x-auto my-3 rounded-lg border border-border/80 shadow-xs">
+                                <table className="min-w-full divide-y divide-border/80 text-xs" {...props} />
+                              </div>
+                            ),
+                            thead: ({ node, ...props }) => (
+                              <thead className="bg-muted/70 font-semibold text-foreground" {...props} />
+                            ),
+                            th: ({ node, ...props }) => (
+                              <th className="px-3 py-2 text-left font-semibold text-foreground border-b border-border/70" {...props} />
+                            ),
+                            td: ({ node, ...props }) => (
+                              <td className="px-3 py-2 text-foreground/90 border-b border-border/40" {...props} />
+                            ),
+                          }}
+                        >
+                          {formatAssistantMessage(msg.content)}
+                        </ReactMarkdown>
                       </div>
                     )}
                   </BubbleContent>
@@ -1435,6 +1524,44 @@ export default function Home() {
             </div>
           </ScrollArea>
 
+          {/* Knowledge Bank Active Context Banner */}
+          {selectedDocs.length > 0 ? (
+            <div className="w-[95%] mb-2 flex items-center gap-1.5 flex-wrap px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs">
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                Knowledge Bank ({selectedDocs.length}):
+              </span>
+              {selectedDocs.map((doc) => (
+                <span
+                  key={doc.id}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-background/90 border border-border/60 text-[11px] text-foreground max-w-[150px] shadow-2xs"
+                  title={doc.name}
+                >
+                  <span className="truncate">{doc.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleDocSelection(doc.id)}
+                    className="hover:text-destructive text-muted-foreground ml-0.5 cursor-pointer"
+                    title="Remove from AI context"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={() => setSelectedDocIds([])}
+                className="text-[10px] text-muted-foreground hover:text-foreground ml-auto underline cursor-pointer"
+              >
+                Deselect All
+              </button>
+            </div>
+          ) : (
+            <div className="w-[95%] mb-1 px-2 flex items-center justify-between text-[11px] text-muted-foreground/60">
+              <span>Using general knowledge {uploadedDocs.length > 0 ? "• Select documents from Documents tab to query them" : ""}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSendMessage} className="w-[95%] flex items-center gap-2 mb-5">
             <textarea
               value={input}
@@ -1446,7 +1573,11 @@ export default function Home() {
                 }
               }}
               className="bg-black/50 w-full backdrop-blur-xs shadow-xl py-4 rounded-3xl focus:bg-black duration-200 px-6 text-white resize-none outline-none min-h-[50px] max-h-[120px]"
-              placeholder="What would you like to know?"
+              placeholder={
+                selectedDocs.length > 0
+                  ? `Ask about your ${selectedDocs.length} selected document${selectedDocs.length > 1 ? "s" : ""} or anything else...`
+                  : "What would you like to know?"
+              }
             />
             <Button type="submit" disabled={isLoading || !input.trim()} className="rounded-full h-12 w-12 shrink-0 cursor-pointer">
               <SendHorizontal />
@@ -1466,7 +1597,7 @@ export default function Home() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="todo" className="flex-1 flex flex-col min-h-0 pt-3 space-y-3">
+              <TabsContent value="todo" className="flex-1 flex flex-col min-h-0 pt-3 space-y-3 overflow-hidden">
                 <form onSubmit={handleAddTask} className="flex gap-2">
                   <Input placeholder="What are you working on?" value={newTaskText} onChange={(e) => setNewTaskText(e.target.value)} className="h-9 text-xs text-foreground dark:bg-zinc-800/80 dark:border-zinc-700 border-black/50" />
                   <Button type="submit" size="sm" className="h-9 px-3">
@@ -1478,11 +1609,11 @@ export default function Home() {
                   <span>{tasks.filter((t) => t.completed).length}/{tasks.length} completed</span>
                 </div>
 
-                <ScrollArea className="flex-1 pr-2">
+                <ScrollArea className="flex-1 min-h-0 overflow-y-auto pr-2">
                   {tasks.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-sm border text-foreground border-dashed rounded-lg py-8">All Done!</div>
                   ) : (
-                    <div className="space-y-1.5 pb-2 *:shadow-xs">
+                    <div className="space-y-1.5 pb-6 *:shadow-xs">
                       {tasks.map((task) => (
                         <div key={task.id} className="group flex items-center justify-between p-2 rounded-lg border border-border/50 bg-background/50 hover:bg-accent/40 transition-colors">
                           <div className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer" onClick={() => handleToggleTask(task.id, task.completed)}>
@@ -1526,33 +1657,51 @@ export default function Home() {
 
                     {(uploadedDocs.length > 0 || uploadingQueue.length > 0) && (
                       <div className="mt-4 flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <h4 className="text-xs font-semibold uppercase text-muted-foreground">Files</h4>
                           <div className="flex items-center gap-1">
                             {uploadedDocs.length > 0 && <Badge size="sm" variant="success-light">Saved: {uploadedDocs.length}</Badge>}
+                            {selectedDocIds.length > 0 && (
+                              <Badge size="sm" className="bg-primary/15 text-primary border-primary/25 text-[10px] font-medium">
+                                AI Context: {selectedDocIds.length}
+                              </Badge>
+                            )}
                             {uploadingQueue.length > 0 && <Badge size="sm" variant="secondary">Uploading: {uploadingQueue.length}</Badge>}
                           </div>
                         </div>
 
-                        {uploadedDocs.length > 0 && (
-                          <Dialog open={isClearAllDocsDialogOpen} onOpenChange={setIsClearAllDocsDialogOpen}>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="xs">Clear all</Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Delete All Documents?</DialogTitle>
-                                <DialogDescription>This will permanently remove all your files from Firebase Storage.</DialogDescription>
-                              </DialogHeader>
-                              <DialogFooter className="flex justify-end gap-2 pt-2">
-                                <DialogClose asChild>
-                                  <Button variant="outline" size="sm">Cancel</Button>
-                                </DialogClose>
-                                <Button variant="destructive" size="sm" onClick={handleClearAllDocuments}>Delete All</Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {uploadedDocs.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              type="button"
+                              onClick={handleToggleSelectAllDocs}
+                              className="text-[11px] h-6 px-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
+                            >
+                              {selectedDocIds.length === uploadedDocs.length ? "Deselect All" : "Select All for AI"}
+                            </Button>
+                          )}
+                          {uploadedDocs.length > 0 && (
+                            <Dialog open={isClearAllDocsDialogOpen} onOpenChange={setIsClearAllDocsDialogOpen}>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="xs">Clear all</Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Delete All Documents?</DialogTitle>
+                                  <DialogDescription>This will permanently remove all your files from Firebase Storage.</DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter className="flex justify-end gap-2 pt-2">
+                                  <DialogClose asChild>
+                                    <Button variant="outline" size="sm">Cancel</Button>
+                                  </DialogClose>
+                                  <Button variant="destructive" size="sm" onClick={handleClearAllDocuments}>Delete All</Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -1592,43 +1741,87 @@ export default function Home() {
                             </div>
                           ))}
 
-                          {uploadedDocs.map((docItem) => (
-                            <div key={docItem.id} className="border-border bg-card rounded-lg border p-2.5 shadow-xs hover:border-primary/40 transition-colors group">
-                              <div className="flex items-start gap-2.5">
-                                <div className="shrink-0">
-                                  {docItem.downloadUrl && (docItem.type || "").startsWith("image/") ? (
-                                    <img src={docItem.downloadUrl} alt={docItem.name} className="rounded-lg h-10 w-10 border object-cover" />
-                                  ) : (
-                                    <div className="border-border text-muted-foreground rounded-lg flex h-10 w-10 items-center justify-center border">
-                                      {getFileIcon(docItem)}
-                                    </div>
-                                  )}
-                                </div>
+                          {uploadedDocs.map((docItem) => {
+                            const isSelected = selectedDocIds.includes(docItem.id);
+                            return (
+                              <div
+                                key={docItem.id}
+                                className={cn(
+                                  "border-border bg-card rounded-lg border p-2.5 shadow-xs transition-colors group",
+                                  isSelected && "border-primary/60 bg-primary/5 ring-1 ring-primary/30"
+                                )}
+                              >
+                                <div className="flex items-start gap-2.5">
+                                  <div className="pt-2.5 shrink-0">
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() => handleToggleDocSelection(docItem.id)}
+                                      title={isSelected ? "Remove from AI Knowledge Bank" : "Add to AI Knowledge Bank"}
+                                      className="cursor-pointer"
+                                    />
+                                  </div>
 
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center justify-between">
-                                    <div className="min-w-0 pr-2">
-                                      <button type="button" onClick={() => setPreviewDoc(docItem)} className="text-xs font-medium text-foreground hover:text-primary truncate block max-w-full text-left hover:underline cursor-pointer" title={`Preview ${docItem.name}`}>
-                                        {docItem.name}
-                                      </button>
-                                      <span className="text-muted-foreground text-[10px]">{formatBytes(docItem.size)}</span>
-                                    </div>
+                                  <div className="shrink-0 cursor-pointer" onClick={() => handleToggleDocSelection(docItem.id)}>
+                                    {docItem.downloadUrl && (docItem.type || "").startsWith("image/") ? (
+                                      <img src={docItem.downloadUrl} alt={docItem.name} className="rounded-lg h-10 w-10 border object-cover" />
+                                    ) : (
+                                      <div className={cn("border-border text-muted-foreground rounded-lg flex h-10 w-10 items-center justify-center border", isSelected && "text-primary border-primary/40 bg-primary/10")}>
+                                        {getFileIcon(docItem)}
+                                      </div>
+                                    )}
+                                  </div>
 
-                                    <div className="flex items-center gap-1">
-                                      {docItem.downloadUrl && (
-                                        <a href={docItem.downloadUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary rounded transition-colors" title="Download">
-                                          <Download className="h-3.5 w-3.5" />
-                                        </a>
-                                      )}
-                                      <Button onClick={() => handleDeleteDocument(docItem)} variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" title="Delete file">
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center justify-between">
+                                      <div className="min-w-0 pr-2">
+                                        <div className="flex items-center gap-1.5">
+                                          <button
+                                            type="button"
+                                            onClick={() => setPreviewDoc(docItem)}
+                                            className="text-xs font-medium text-foreground hover:text-primary truncate block max-w-full text-left hover:underline cursor-pointer"
+                                            title={`Preview ${docItem.name}`}
+                                          >
+                                            {docItem.name}
+                                          </button>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                          <span className="text-muted-foreground text-[10px]">{formatBytes(docItem.size)}</span>
+                                          {isSelected && (
+                                            <span className="text-[10px] font-medium text-primary bg-primary/15 px-1 rounded">
+                                              In AI Bank
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-1">
+                                        {docItem.downloadUrl && (
+                                          <a
+                                            href={docItem.downloadUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-muted-foreground hover:text-primary rounded transition-colors"
+                                            title="Download"
+                                          >
+                                            <Download className="h-3.5 w-3.5" />
+                                          </a>
+                                        )}
+                                        <Button
+                                          onClick={() => handleDeleteDocument(docItem)}
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6 text-muted-foreground hover:text-destructive cursor-pointer"
+                                          title="Delete file"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </ScrollArea>
