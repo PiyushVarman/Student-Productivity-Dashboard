@@ -755,7 +755,7 @@ export default function Home() {
           async () => {
             try {
               const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-              await addDoc(collection(db, "users", currentUser.uid, "documents"), {
+              const docRef = await addDoc(collection(db, "users", currentUser.uid, "documents"), {
                 name: file.name,
                 size: file.size,
                 type: file.type || "application/octet-stream",
@@ -763,6 +763,35 @@ export default function Home() {
                 downloadUrl,
                 createdAt: serverTimestamp(),
               });
+
+              // Extract text if it's a text/txt file (or parse as needed)
+              try {
+                let fileText = "";
+                if (file.type === "text/plain" || file.name.endsWith(".txt")) {
+                  fileText = await file.text();
+                } else {
+                  const res = await fetch(downloadUrl);
+                  fileText = await res.text();
+                }
+
+                if (fileText && fileText.trim().length > 0) {
+                  // Call our backend embedding API route
+                  await fetch("/api/embed", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      userId: currentUser.uid,
+                      docId: docRef.id,
+                      downloadUrl,
+                      fileType: file.type,
+                      fileName: file.name,
+                    }),
+                  });
+                  console.log("Document indexed for RAG vector search!");
+                }
+              } catch (embedErr) {
+                console.warn("Embedding generation notice:", embedErr);
+              }
 
               setUploadingQueue((prev) => prev.filter((item) => item.id !== queueId));
             } catch (metaErr) {
